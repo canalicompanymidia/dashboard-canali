@@ -7,12 +7,14 @@ import {
   Layers,
   Megaphone,
   ShieldAlert,
+  Stethoscope,
   Target,
   Webhook,
 } from 'lucide-react'
 
 import { MetaSyncButton } from '@/components/admin/meta-sync-button'
 import { isAdminGateEnabled } from '@/lib/admin/auth'
+import { runHealthChecks } from '@/lib/health'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { isVaultEncryptionConfigured } from '@/lib/crypto'
@@ -103,8 +105,65 @@ export default async function AdminOverviewPage() {
 
   const pending = integrations.filter((item) => !item.ok).length
 
+  const health = await runHealthChecks()
+  const brokenChecks = health.filter((check) => check.status !== 'ok')
+
   return (
     <div className="space-y-5">
+      {/* Diagnóstico real da conexão — roda uma consulta de verdade, em vez
+          de apenas conferir se a variável de ambiente foi preenchida. */}
+      <Card className={brokenChecks.length > 0 ? 'border-destructive/40' : undefined}>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Stethoscope className="size-4" />
+                Diagnóstico da conexão
+              </CardTitle>
+              <CardDescription>
+                Consultas reais ao banco. É aqui que aparece a causa quando algo falha ao salvar.
+              </CardDescription>
+            </div>
+            <Badge variant={brokenChecks.length === 0 ? 'positive' : 'negative'}>
+              {brokenChecks.length === 0
+                ? 'Conexão saudável'
+                : `${brokenChecks.length} problema(s)`}
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <ul className="divide-y divide-border">
+            {health.map((check) => (
+              <li key={check.name} className="flex items-start gap-3 py-2.5">
+                {check.status === 'ok' ? (
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-positive" />
+                ) : (
+                  <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{check.name}</p>
+                  <p
+                    className={cn(
+                      'text-xs break-words',
+                      check.status === 'ok' ? 'text-muted-foreground' : 'text-destructive',
+                    )}
+                  >
+                    {check.detail}
+                  </p>
+                  {check.hint ? (
+                    <p className="mt-1 rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
+                      Como resolver: {check.hint}
+                    </p>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
       {isAdminGateEnabled() ? null : (
         <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/8 p-4">
           <ShieldAlert className="mt-0.5 size-4.5 shrink-0 text-warning-foreground dark:text-warning" />
