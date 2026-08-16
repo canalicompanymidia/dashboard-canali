@@ -31,7 +31,14 @@ export function ActionEditor({ action }: { action?: MarketingAction }) {
     <ActionForm action={saveMarketingAction} resetOnSuccess={!isEdit} className="space-y-3">
       {(pending, state) => (
         <>
-          {action ? <input type="hidden" name="id" value={action.id} /> : null}
+          {action ? (
+            <>
+              <input type="hidden" name="id" value={action.id} />
+              {/* Reenvia o slug atual para que editar o título não mude o
+                  identificador de uma ação já publicada. */}
+              <input type="hidden" name="slug" value={action.slug} />
+            </>
+          ) : null}
 
           <FieldGrid columns={2}>
             <Field label="Título" htmlFor={`title-${uid}`} required>

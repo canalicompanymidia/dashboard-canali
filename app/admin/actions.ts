@@ -61,13 +61,9 @@ export async function saveAnnualGoal(
   const supabase = getSupabaseAdminClient()
   if (!supabase) return NO_DB
 
-  const { id, is_active, sort_order, ...values } = parsed.data
+  const { id, sort_order, ...values } = parsed.data
 
-  const payload = {
-    ...values,
-    sort_order: sort_order ?? 0,
-    is_active: is_active === 'on' || is_active === 'true',
-  }
+  const payload = { ...values, sort_order: sort_order ?? 0 }
 
   const { error } = id
     ? await supabase.from('annual_goals').update(payload).eq('id', id)
@@ -133,10 +129,16 @@ export async function saveMarketingAction(
 
   const { id, slug, sort_order, ...values } = parsed.data
 
+  // O slug não tem campo na tela: ao criar, é derivado do título; ao editar,
+  // o formulário reenvia o slug atual num campo oculto para mantê-lo estável.
   const payload = {
     ...values,
     slug: slug ?? slugify(values.title),
     sort_order: sort_order ?? 0,
+  }
+
+  if (!payload.slug) {
+    return fail('Não foi possível gerar um identificador a partir do título. Use letras ou números.')
   }
 
   const { error } = id
