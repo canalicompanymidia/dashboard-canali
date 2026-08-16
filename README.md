@@ -153,8 +153,15 @@ do painel.
 ### Meta Ads
 
 O Meta **não envia gasto por webhook**. O investimento é puxado da Marketing API
-por um job agendado (`vercel.json`, a cada 3 horas) e gravado em `ad_spend` com
+por um job agendado (`vercel.json`, de hora em hora) e gravado em `ad_spend` com
 granularidade diária por campanha.
+
+> **Atenção ao plano da Vercel.** O `vercel.json` usa `0 * * * *` (de hora em
+> hora), que **exige o plano Pro**. No plano Hobby os cron jobs só podem rodar
+> **uma vez por dia** — qualquer expressão mais frequente **faz o deploy falhar**.
+> Se for usar Hobby, troque a expressão por `0 9 * * *` (uma vez por dia, 6h no
+> horário de Brasília) e use o botão **Sincronizar agora** em `/admin` quando
+> precisar do número atualizado na hora.
 
 - Sincronização manual: botão **Sincronizar agora** em `/admin`
 - Endpoint: `GET|POST /api/integrations/meta-ads/sync?since=YYYY-MM-DD&until=YYYY-MM-DD`
