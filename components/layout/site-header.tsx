@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Settings2 } from 'lucide-react'
+import { Settings2 } from 'lucide-react'
 
 import { CanaliLogo } from '@/components/layout/canali-logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
@@ -26,13 +26,7 @@ export function SiteHeader() {
             {formatDate(new Date())}
           </span>
 
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/">
-              <LayoutDashboard className="size-4" />
-              <span className="hidden sm:inline">Painel</span>
-            </Link>
-          </Button>
-
+          {/* O botão "Painel" saiu: a marca à esquerda já leva para a Home. */}
           <Button variant="outline" size="sm" asChild>
             <Link href="/admin">
               <Settings2 className="size-4" />

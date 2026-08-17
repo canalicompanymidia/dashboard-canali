@@ -163,8 +163,7 @@ export function VaultPanel({ configured }: { configured: boolean }) {
             </div>
 
             <p className="mt-3.5 text-sm text-muted-foreground">
-              Credenciais e acessos das ferramentas do time, cifrados em repouso com AES-256. A
-              sessão expira sozinha em 15 minutos.
+              Senhas e acessos do time. A sessão expira sozinha em 15 minutos.
             </p>
 
             {!configured ? (

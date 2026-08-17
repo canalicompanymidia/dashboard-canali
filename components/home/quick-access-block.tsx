@@ -61,7 +61,18 @@ export function QuickAccessBlock({ categories, vaultConfigured }: QuickAccessBlo
         </div>
       }
     >
-      <div className="space-y-3">
+      {/* Faixa de destaque: o Hub é a área mais usada no dia a dia, então o
+          fundo tingido a separa do resto da página sem competir com os
+          números dos blocos de cima. */}
+      <div
+        className={cn(
+          'space-y-3 rounded-2xl border p-3 sm:p-4',
+          'border-indigo-200 bg-gradient-to-b from-indigo-100/70 to-indigo-50/30',
+          'shadow-[0_1px_2px_rgba(15,23,42,.04),0_10px_30px_-18px_rgba(79,70,229,.45)]',
+          'dark:border-indigo-400/30 dark:from-indigo-500/[0.16] dark:to-indigo-500/[0.05]',
+          'dark:shadow-[0_10px_30px_-18px_rgba(129,140,248,.5)]',
+        )}
+      >
         {categories.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
             <FolderOpen className="mx-auto size-8 text-muted-foreground/50" />

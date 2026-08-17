@@ -31,8 +31,15 @@ export function Section({
   return (
     <section id={id} className={cn('scroll-mt-20', className)}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs">
+        {/* Sem subtítulo o texto é uma linha só: centraliza no ícone. Com
+            subtítulo, o bloco é mais alto e o ícone acompanha o topo. */}
+        <div className={cn('flex gap-3', description ? 'items-start' : 'items-center')}>
+          <span
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs',
+              description && 'mt-0.5',
+            )}
+          >
             <Icon className="size-4.5" />
           </span>
           <div>
