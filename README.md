@@ -167,6 +167,43 @@ granularidade diária por campanha.
 - Endpoint: `GET|POST /api/integrations/meta-ads/sync?since=YYYY-MM-DD&until=YYYY-MM-DD`
 - Protegido por `CRON_SECRET`
 
+### Importar o histórico de vendas da Hotmart (CSV)
+
+Os webhooks só capturam vendas a partir do momento em que são configurados.
+Para trazer o que já aconteceu, exporte o relatório de vendas na Hotmart e use:
+
+```bash
+# 1. confira os números antes de gravar qualquer coisa
+node scripts/import-hotmart-csv.mjs relatorio.csv --dry-run
+
+# 2a. grave direto (precisa das chaves do Supabase no .env.local)
+node scripts/import-hotmart-csv.mjs relatorio.csv
+
+# 2b. ou gere um .sql para colar no SQL Editor do Supabase
+node scripts/import-hotmart-csv.mjs relatorio.csv --sql importacao.sql
+```
+
+Como os valores são lidos do relatório:
+
+| Coluna do CSV | Vira | Por quê |
+| --- | --- | --- |
+| `Preço do Produto` | faturamento bruto | é o valor da venda. `Preço Total` incluiria o juro do parcelamento, que é do meio de pagamento e não da operação — nas vendas à vista os dois são iguais |
+| `Faturamento líquido` | faturamento líquido | é o que o produtor recebe, já sem a taxa da Hotmart e sem a parte de afiliado/coprodução |
+| a diferença entre os dois | taxas e comissões | — |
+| `Data de Confirmação` (ou `Data de Venda`) | data da venda | mesma precedência do adaptador de webhook; interpretada no horário de Brasília |
+| `Transação` | chave única | é o que impede duplicidade |
+
+Status: `Aprovado` e `Completo` contam como faturamento; `Reembolsado` e
+`Chargeback` saem do agregado automaticamente.
+
+A gravação passa pela mesma função SQL dos webhooks, então reimportar o mesmo
+arquivo não duplica nada, e um relatório antigo não desfaz um reembolso que já
+chegou por webhook.
+
+> O relatório da Hotmart contém nome, e-mail, CPF e telefone dos compradores.
+> O `.gitignore` bloqueia `*.csv` e `import*.sql` justamente para esses
+> arquivos não irem parar no repositório.
+
 ### Idempotência e ordem dos eventos
 
 Plataformas reenviam webhooks e não garantem ordem de entrega. Duas proteções:

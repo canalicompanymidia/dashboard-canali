@@ -32,6 +32,14 @@ yarn-error.log*
 .env.production
 !.env.example
 
+# Relatórios de venda e arquivos de importação.
+# Contêm dados pessoais de compradores (nome, e-mail, CPF, telefone) e não
+# podem entrar no versionamento.
+*.csv
+*.xlsx
+import*.sql
+scripts/*.sql
+
 # vercel
 .vercel
 
