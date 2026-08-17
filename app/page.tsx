@@ -55,13 +55,7 @@ function PageIntro({ year }: { year: number }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Hub de Marketing Unificado
-        </h1>
-        <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-          Metas, faturamento em tempo real, ações ativas e acessos do time da Canali Company —
-          centralizados em um só lugar.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Hub Canali Company</h1>
       </div>
 
       <nav className="no-print flex flex-wrap gap-1.5 text-xs" aria-label="Navegação dos blocos">

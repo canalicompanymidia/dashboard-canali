@@ -7,6 +7,7 @@ import {
   BadgePercent,
   Banknote,
   Coins,
+  Info,
   Megaphone,
   RefreshCw,
   ShoppingCart,
@@ -15,7 +16,6 @@ import {
 
 import { Section } from '@/components/home/section'
 import { Stat } from '@/components/home/stat'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { PLATFORM_LABELS } from '@/lib/calculations'
@@ -49,6 +49,7 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
   const [isRefreshing, setIsRefreshing] = React.useState(false)
   const [lastSync, setLastSync] = React.useState<string | null>(null)
   const [isLive, setIsLive] = React.useState(false)
+  const [showFormula, setShowFormula] = React.useState(false)
 
   const refresh = React.useCallback(async () => {
     setIsRefreshing(true)
@@ -116,8 +117,7 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
     <Section
       id="metricas"
       index="02"
-      title="Métricas do mês em tempo real"
-      description={`${metrics.monthLabel} — Hotmart, OnProfit, TMB e Meta Ads consolidados.`}
+      title="Métricas do Mês"
       icon={Activity}
       actions={
         <div className="flex items-center gap-2">
@@ -276,14 +276,35 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
         </div>
       </div>
 
-      <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <Badge variant="muted">Cálculo</Badge>
-        <span>
-          Bruto = vendas aprovadas · Líquido = bruto − taxas − reembolsos · Lucro = líquido −
-          tráfego
-        </span>
+      {/* A fórmula é consulta pontual, não leitura diária: fica atrás de um
+          clique para não competir com os números. */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => setShowFormula((current) => !current)}
+          aria-expanded={showFormula}
+          aria-controls="formula-metricas"
+          className={cn(
+            'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-medium transition-colors',
+            'focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none',
+            showFormula
+              ? 'border-border bg-accent text-foreground'
+              : 'border-transparent bg-muted hover:bg-accent hover:text-foreground',
+          )}
+        >
+          <Info className="size-3" />
+          Cálculo
+        </button>
+
+        {showFormula ? (
+          <span id="formula-metricas">
+            Bruto = vendas aprovadas · Líquido = bruto − taxas − reembolsos · Lucro = líquido −
+            tráfego
+          </span>
+        ) : null}
+
         {lastSync ? <span className="ml-auto tabular">Atualizado às {lastSync}</span> : null}
-      </p>
+      </div>
     </Section>
   )
 }

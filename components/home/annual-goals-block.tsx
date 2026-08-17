@@ -26,8 +26,7 @@ export function AnnualGoalsBlock({ goals, accumulatedRevenue, context }: AnnualG
     <Section
       id="metas"
       index="01"
-      title="Metas anuais & projeção de EBITDA"
-      description={`Acompanhamento do ano de ${context.year} — progresso, ritmo e margem.`}
+      title="Metas Anuais e Projeção"
       icon={Target}
       actions={
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-xs">
