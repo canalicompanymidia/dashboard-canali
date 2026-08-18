@@ -240,6 +240,38 @@ npm run vault:keygen                     # chave de criptografia
 npm run vault:hash -- "sua-senha-forte"  # hash da Senha Mestre
 ```
 
+### Acesso granular por subcategoria
+
+O cofre tem dois caminhos de entrada:
+
+| Entrada | Como | O que vê |
+| --- | --- | --- |
+| **Master** | Senha Mestre | todas as credenciais, com e sem subcategoria |
+| **Perfil** | escolhe o nome + PIN de 4 dígitos | só as subcategorias liberadas para ele |
+
+Cada credencial pode receber uma **subcategoria** opcional (ex.: `Mídia Paga`,
+`Financeiro`). Em `Admin → Cofre → Gestão de Acessos do Cofre` você cadastra os
+colaboradores, define o PIN de cada um e marca quais subcategorias ele enxerga.
+
+**Credencial sem subcategoria só aparece no acesso Master.** É o padrão seguro:
+esquecer de classificar uma senha nunca a expõe ao time todo. O admin mostra um
+aviso com a contagem de credenciais nessa situação.
+
+A filtragem acontece no servidor — o navegador do colaborador nunca recebe uma
+senha fora do escopo dele, nem para depois escondê-la na interface. E as
+permissões são lidas do banco a cada consulta, não gravadas no token: revogar um
+acesso vale na hora, sem esperar a sessão expirar.
+
+> **Sobre o PIN de 4 dígitos.** São 10.000 combinações — frágil por natureza. O
+> hash usa scrypt (cada tentativa custa ~100ms) e, principalmente, o perfil é
+> **bloqueado por 15 minutos após 5 erros seguidos**, com a contagem feita
+> atomicamente no banco. O admin pode liberar antes pelo botão *Desbloquear*, e
+> trocar o PIN também destrava. Para segredos de alto risco (financeiro, chaves
+> de produção), prefira deixar sem subcategoria — assim exigem a Senha Mestre.
+
+Migration: `supabase/migrations/0001_cofre_subcategorias_e_perfis.sql`. É
+idempotente e não altera nenhuma credencial existente.
+
 > Guarde a `VAULT_ENCRYPTION_KEY`. Trocá-la torna ilegíveis todas as senhas já
 > cifradas — para rotacionar, recadastre as credenciais antes.
 

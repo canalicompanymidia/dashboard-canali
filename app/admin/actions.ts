@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import {
   annualGoalSchema,
+  cofrePerfilSchema,
   documentCategorySchema,
   documentSchema,
   firstIssueMessage,
@@ -18,7 +19,13 @@ import { encryptSecret, isVaultEncryptionConfigured } from '@/lib/crypto'
 import { syncMetaAdsSpend } from '@/lib/integrations/meta-ads'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { slugify } from '@/lib/utils'
-import { hasVaultSession, setMasterPassword } from '@/lib/vault'
+import {
+  desbloquearPerfil,
+  excluirPerfil,
+  hasMasterSession,
+  salvarPerfil,
+  setMasterPassword,
+} from '@/lib/vault'
 
 /**
  * Server Actions do painel administrativo.
@@ -287,9 +294,10 @@ export async function saveVaultCredential(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
-  // Gravar credencial exige a mesma barreira de ler: sessão do cofre válida.
-  if (!(await hasVaultSession())) {
-    return fail('Sessão do cofre expirada. Valide a Senha Mestre novamente.')
+  // Escrever no cofre exige acesso Master: um colaborador com PIN pode ler
+  // o que foi liberado para ele, mas nunca alterar credencial.
+  if (!(await hasMasterSession())) {
+    return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
   }
 
   if (!isVaultEncryptionConfigured()) {
@@ -327,8 +335,8 @@ export async function deleteVaultCredential(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await hasVaultSession())) {
-    return fail('Sessão do cofre expirada. Valide a Senha Mestre novamente.')
+  if (!(await hasMasterSession())) {
+    return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
   }
 
   const id = String(formData.get('id') ?? '')
@@ -365,4 +373,64 @@ export async function runMetaAdsSync(): Promise<ActionState> {
 
   revalidate('/admin')
   return done(`${result.message} Total no período: R$ ${result.totalSpend.toFixed(2)}.`)
+}
+
+// ---------------------------------------------------------------------------
+//  Perfis de acesso ao cofre
+// ---------------------------------------------------------------------------
+
+export async function saveCofrePerfil(
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  if (!(await hasMasterSession())) {
+    return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
+  }
+
+  const parsed = cofrePerfilSchema.safeParse(formDataToObject(formData))
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error))
+
+  const { id, nome, pin, subcategorias, ativo } = parsed.data
+
+  const result = await salvarPerfil({ id, nome, pin, subcategorias, ativo })
+  if (!result.ok) return fail(result.message)
+
+  revalidate('/admin/cofre')
+  return done(result.message)
+}
+
+export async function deleteCofrePerfil(
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  if (!(await hasMasterSession())) {
+    return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
+  }
+
+  const id = String(formData.get('id') ?? '')
+  if (!id) return fail('Perfil não identificado.')
+
+  const result = await excluirPerfil(id)
+  if (!result.ok) return fail(result.message)
+
+  revalidate('/admin/cofre')
+  return done(result.message)
+}
+
+export async function unlockCofrePerfil(
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  if (!(await hasMasterSession())) {
+    return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
+  }
+
+  const id = String(formData.get('id') ?? '')
+  if (!id) return fail('Perfil não identificado.')
+
+  const result = await desbloquearPerfil(id)
+  if (!result.ok) return fail(result.message)
+
+  revalidate('/admin/cofre')
+  return done(result.message)
 }

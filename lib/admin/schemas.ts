@@ -265,6 +265,9 @@ export const vaultCredentialSchema = z.object({
   id: optionalText,
   service_name: requiredText('Informe o nome do serviço.', 120),
   category: z.preprocess((value) => blankToNull(value) ?? 'Geral', z.string().max(80)),
+  // Opcional de propósito: tudo que já estava cadastrado continua válido.
+  // Sem subcategoria, a credencial fica visível apenas no acesso Master.
+  subcategoria: optionalText,
   username: optionalText,
   // Vazio ao editar = manter a senha atual (não apagar).
   password: textOrEmpty,
@@ -284,6 +287,32 @@ export const masterPasswordSchema = z
     message: 'As senhas não conferem.',
     path: ['confirm'],
   })
+
+/**
+ * Perfil de acesso ao cofre.
+ * O PIN é opcional na edição: em branco significa "manter o atual".
+ */
+export const cofrePerfilSchema = z.object({
+  id: optionalText,
+  nome: requiredText('Informe o nome do colaborador.', 80),
+  pin: z.preprocess(
+    (value) => (value === undefined || value === null ? '' : String(value).trim()),
+    z.string().refine((v) => v === '' || /^\d{4}$/.test(v), {
+      message: 'O PIN precisa ter exatamente 4 dígitos.',
+    }),
+  ),
+  // Os checkboxes chegam como uma string separada por "\n" montada no cliente.
+  subcategorias: z.preprocess(
+    (value) => (value === undefined || value === null ? '' : String(value)),
+    z.string().transform((v) =>
+      v
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ),
+  ativo: checkboxField,
+})
 
 /** Converte FormData em objeto simples para o zod validar. */
 export function formDataToObject(formData: FormData): Record<string, string> {
@@ -319,6 +348,9 @@ const FIELD_LABELS: Record<string, string> = {
   owner_email: 'E-mail do responsável',
   description: 'Descrição',
   password: 'Senha',
+  pin: 'PIN',
+  nome: 'Nome do colaborador',
+  subcategoria: 'Subcategoria',
   confirm: 'Confirmação da senha',
   sort_order: 'Ordem',
 }

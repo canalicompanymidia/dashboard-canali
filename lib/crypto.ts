@@ -158,39 +158,86 @@ function getSessionSecret(): Buffer {
 }
 
 /**
- * Emite um token opaco válido por 15 minutos.
- * É ele que autoriza a leitura das credenciais depois da Senha Mestre —
- * a senha em si nunca trafega de novo.
+ * Escopo de uma sessão do cofre.
+ *
+ * 'master' vê tudo. Um perfil vê apenas as subcategorias liberadas para
+ * ele — e a lista de subcategorias NÃO vai no token: fica no banco e é
+ * consultada a cada leitura. Assim, revogar um acesso no admin tem efeito
+ * imediato, sem esperar a sessão de 15 minutos expirar.
  */
-export function issueVaultSession(): { token: string; expiresAt: number } {
+export type VaultScope = { kind: 'master' } | { kind: 'profile'; profileId: string }
+
+function scopeToString(scope: VaultScope): string {
+  return scope.kind === 'master' ? 'master' : `p:${scope.profileId}`
+}
+
+function scopeFromString(raw: string): VaultScope | null {
+  if (raw === 'master') return { kind: 'master' }
+  if (raw.startsWith('p:')) {
+    const profileId = raw.slice(2)
+    return profileId ? { kind: 'profile', profileId } : null
+  }
+  return null
+}
+
+/**
+ * Emite um token opaco válido por 15 minutos.
+ * É ele que autoriza a leitura das credenciais depois da Senha Mestre ou
+ * do PIN — nenhum dos dois trafega de novo.
+ */
+export function issueVaultSession(scope: VaultScope): { token: string; expiresAt: number } {
   const expiresAt = Date.now() + SESSION_TTL_SECONDS * 1000
   const nonce = randomBytes(8).toString('hex')
-  const payload = `${expiresAt}.${nonce}`
+  const payload = `${expiresAt}.${nonce}.${scopeToString(scope)}`
   const signature = createHmac('sha256', getSessionSecret()).update(payload).digest('base64url')
 
   return { token: `${payload}.${signature}`, expiresAt }
 }
 
-/** Valida o token de sessão do cofre (assinatura + expiração). */
-export function verifyVaultSession(token: string | undefined | null): boolean {
-  if (!token) return false
+/**
+ * Valida o token e devolve o escopo. null quando a assinatura não confere,
+ * o prazo venceu ou o formato é inválido.
+ */
+export function verifyVaultSession(token: string | undefined | null): VaultScope | null {
+  if (!token) return null
 
   try {
     const parts = token.split('.')
-    if (parts.length !== 3) return false
+    if (parts.length !== 4) return null
 
-    const [expiresAtRaw, nonce, signature] = parts
-    const payload = `${expiresAtRaw}.${nonce}`
+    const [expiresAtRaw, nonce, scopeRaw, signature] = parts
+    const payload = `${expiresAtRaw}.${nonce}.${scopeRaw}`
     const expected = createHmac('sha256', getSessionSecret()).update(payload).digest('base64url')
 
     const a = Buffer.from(signature)
     const b = Buffer.from(expected)
-    if (a.length !== b.length || !timingSafeEqual(a, b)) return false
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null
 
-    return Number(expiresAtRaw) > Date.now()
+    if (!(Number(expiresAtRaw) > Date.now())) return null
+
+    return scopeFromString(scopeRaw)
   } catch {
-    return false
+    return null
   }
+}
+
+// ---------------------------------------------------------------------------
+//  PIN individual dos perfis
+// ---------------------------------------------------------------------------
+
+/**
+ * O PIN usa o MESMO scrypt da Senha Mestre, e não um hash rápido.
+ *
+ * São só 4 dígitos — 10.000 combinações. O scrypt torna cada tentativa
+ * cara (~100ms), mas sozinho não basta: o bloqueio por tentativas em
+ * cofre_perfis é o que de fato inviabiliza a força bruta.
+ */
+export function hashPin(pin: string): string {
+  return hashMasterPassword(pin)
+}
+
+export function verifyPin(pin: string, storedHash: string): boolean {
+  return verifyMasterPassword(pin, storedHash)
 }
 
 // ---------------------------------------------------------------------------

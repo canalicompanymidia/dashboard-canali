@@ -266,6 +266,9 @@ create table if not exists public.vault_credentials (
   id                 uuid primary key default gen_random_uuid(),
   service_name       text        not null,
   category           text        not null default 'Geral',
+  -- Subcategoria opcional: base do controle de acesso por perfil.
+  -- NULL = visível somente no acesso Master.
+  subcategoria       text,
   username           text,
   password_encrypted text,                       -- payload AES-256-GCM (iv:tag:ciphertext)
   url                text,
@@ -280,17 +283,85 @@ comment on column public.vault_credentials.password_encrypted is
   'NUNCA gravar senha em texto puro aqui. Formato: base64(iv):base64(authTag):base64(ciphertext).';
 
 create index if not exists idx_vault_category on public.vault_credentials (category, sort_order);
+create index if not exists idx_vault_subcategoria
+  on public.vault_credentials (subcategoria) where subcategoria is not null;
 
 -- Auditoria de acesso ao cofre.
 create table if not exists public.vault_access_log (
   id          uuid primary key default gen_random_uuid(),
   success     boolean     not null,
+  perfil_id   uuid,
+  escopo      text,
   ip_address  text,
   user_agent  text,
   accessed_at timestamptz not null default now()
 );
 
 create index if not exists idx_vault_log_time on public.vault_access_log (accessed_at desc);
+
+-- Perfis de acesso ao cofre: cada colaborador tem um PIN e enxerga apenas
+-- as subcategorias liberadas para ele.
+create table if not exists public.cofre_perfis (
+  id                       uuid primary key default gen_random_uuid(),
+  nome_colaborador         text        not null,
+  pin_hash                 text        not null,
+  subcategorias_permitidas text[]      not null default '{}',
+  ativo                    boolean     not null default true,
+  -- Um PIN de 4 dígitos tem só 10.000 combinações. Sem bloqueio por
+  -- tentativas, a força bruta é trivial.
+  tentativas_falhas        integer     not null default 0,
+  bloqueado_ate            timestamptz,
+  ultimo_acesso_em         timestamptz,
+  created_at               timestamptz not null default now(),
+  updated_at               timestamptz not null default now()
+);
+
+comment on table public.cofre_perfis is
+  'Colaboradores com acesso ao Cofre. O PIN é guardado como hash scrypt — nunca em texto puro.';
+
+create unique index if not exists idx_cofre_perfis_nome
+  on public.cofre_perfis (lower(nome_colaborador));
+create index if not exists idx_cofre_perfis_ativo
+  on public.cofre_perfis (ativo, nome_colaborador);
+
+-- Contagem atômica de tentativas: dois PINs errados simultâneos não podem
+-- se perder numa atualização sobrescrevendo a outra.
+create or replace function public.cofre_registrar_tentativa(
+  p_perfil  uuid,
+  p_sucesso boolean,
+  p_max_falhas integer default 5,
+  p_bloqueio_minutos integer default 15
+)
+returns table (tentativas integer, bloqueado_ate timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+begin
+  if p_sucesso then
+    update public.cofre_perfis p
+       set tentativas_falhas = 0,
+           bloqueado_ate     = null,
+           ultimo_acesso_em  = now()
+     where p.id = p_perfil
+    returning p.tentativas_falhas, p.bloqueado_ate into tentativas, bloqueado_ate;
+  else
+    update public.cofre_perfis p
+       set tentativas_falhas = p.tentativas_falhas + 1,
+           bloqueado_ate     = case
+                                 when p.tentativas_falhas + 1 >= p_max_falhas
+                                   then now() + make_interval(mins => p_bloqueio_minutos)
+                                 else p.bloqueado_ate
+                               end
+     where p.id = p_perfil
+    returning p.tentativas_falhas, p.bloqueado_ate into tentativas, bloqueado_ate;
+  end if;
+
+  return next;
+end;
+$fn$;
+
+revoke all on function public.cofre_registrar_tentativa from public, anon, authenticated;
 
 -- =====================================================================
 --  CONFIGURAÇÕES DA APLICAÇÃO
@@ -316,7 +387,7 @@ begin
   foreach t in array array[
     'annual_goals', 'monthly_financials', 'sales_transactions', 'ad_spend',
     'marketing_actions', 'document_categories', 'documents',
-    'vault_credentials', 'app_settings', 'platform_fees'
+    'vault_credentials', 'app_settings', 'platform_fees', 'cofre_perfis'
   ]
   loop
     execute format('drop trigger if exists trg_%1$s_updated_at on public.%1$s', t);

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, KeyRound, Lock, LockOpen, Plus, Save, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, KeyRound, Lock, LockOpen, Plus, Save, ShieldCheck, Unlock, UserCog } from 'lucide-react'
 
 import { ActionForm, FormFeedback } from '@/components/admin/action-form'
 import { ConfirmDelete } from '@/components/admin/confirm-delete'
@@ -10,8 +10,15 @@ import { Field, FieldGrid } from '@/components/admin/field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { deleteVaultCredential, saveVaultCredential, updateMasterPassword } from '@/app/admin/actions'
-import type { VaultCredential } from '@/lib/types'
+import {
+  deleteCofrePerfil,
+  deleteVaultCredential,
+  saveCofrePerfil,
+  saveVaultCredential,
+  unlockCofrePerfil,
+  updateMasterPassword,
+} from '@/app/admin/actions'
+import type { CofrePerfil, VaultCredential } from '@/lib/types'
 
 type CredentialMeta = Omit<VaultCredential, 'password'>
 
@@ -36,7 +43,7 @@ export function VaultUnlockGate() {
       const response = await fetch('/api/vault/unlock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ modo: 'master', senha: password }),
       })
       const payload = (await response.json()) as { ok: boolean; error?: string }
 
@@ -95,7 +102,13 @@ export function VaultUnlockGate() {
 }
 
 /** Formulário de credencial. A senha é cifrada no servidor antes de gravar. */
-export function CredentialEditor({ credential }: { credential?: CredentialMeta }) {
+export function CredentialEditor({
+  credential,
+  subcategorias = [],
+}: {
+  credential?: CredentialMeta
+  subcategorias?: string[]
+}) {
   const isEdit = Boolean(credential)
   const uid = credential?.id ?? 'new-credential'
 
@@ -105,7 +118,7 @@ export function CredentialEditor({ credential }: { credential?: CredentialMeta }
         <>
           {credential ? <input type="hidden" name="id" value={credential.id} /> : null}
 
-          <FieldGrid columns={4}>
+          <FieldGrid columns={3}>
             <Field label="Serviço" htmlFor={`cred-name-${uid}`} required>
               <Input
                 id={`cred-name-${uid}`}
@@ -124,6 +137,26 @@ export function CredentialEditor({ credential }: { credential?: CredentialMeta }
                 placeholder="Tráfego"
                 required
               />
+            </Field>
+
+            <Field
+              label="Subcategoria"
+              htmlFor={`cred-sub-${uid}`}
+              hint="Opcional. Em branco = visível só no acesso Master."
+            >
+              <Input
+                id={`cred-sub-${uid}`}
+                name="subcategoria"
+                defaultValue={credential?.subcategoria ?? ''}
+                list={`sub-options-${uid}`}
+                placeholder="Ex.: Mídia Paga"
+              />
+              {/* Sugere o que já existe, mas aceita um nome novo. */}
+              <datalist id={`sub-options-${uid}`}>
+                {subcategorias.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
             </Field>
 
             <Field label="Usuário / e-mail" htmlFor={`cred-user-${uid}`}>
@@ -276,4 +309,170 @@ export function VaultLockButton() {
       {pending ? 'Bloqueando...' : 'Bloquear cofre'}
     </Button>
   )
+}
+
+// ---------------------------------------------------------------------------
+//  Gestão de Acessos do Cofre
+// ---------------------------------------------------------------------------
+
+/**
+ * Cadastro de colaborador com PIN e permissões.
+ *
+ * As subcategorias marcadas viajam num campo oculto separado por quebra de
+ * linha: checkbox nativo enviaria o mesmo nome repetido, e o FormData vira
+ * um objeto simples do lado do servidor.
+ */
+export function PerfilEditor({
+  perfil,
+  subcategorias,
+}: {
+  perfil?: CofrePerfil
+  subcategorias: string[]
+}) {
+  const isEdit = Boolean(perfil)
+  const uid = perfil?.id ?? 'novo-perfil'
+
+  const [selecionadas, setSelecionadas] = React.useState<string[]>(
+    perfil?.subcategorias_permitidas ?? [],
+  )
+  const [ativo, setAtivo] = React.useState(perfil?.ativo ?? true)
+
+  function alternar(sub: string) {
+    setSelecionadas((atual) =>
+      atual.includes(sub) ? atual.filter((s) => s !== sub) : [...atual, sub],
+    )
+  }
+
+  return (
+    <ActionForm action={saveCofrePerfil} resetOnSuccess={!isEdit} className="space-y-3">
+      {(pending, state) => (
+        <>
+          {perfil ? <input type="hidden" name="id" value={perfil.id} /> : null}
+          <input type="hidden" name="subcategorias" value={selecionadas.join('\n')} />
+          <input type="hidden" name="ativo" value={ativo ? 'on' : ''} />
+
+          <FieldGrid columns={3}>
+            <Field label="Nome do colaborador" htmlFor={`perfil-nome-${uid}`} required>
+              <Input
+                id={`perfil-nome-${uid}`}
+                name="nome"
+                defaultValue={perfil?.nome_colaborador ?? ''}
+                placeholder="Ana Souza"
+                required
+              />
+            </Field>
+
+            <Field
+              label="PIN de 4 dígitos"
+              htmlFor={`perfil-pin-${uid}`}
+              hint={isEdit ? 'Em branco mantém o PIN atual.' : 'O colaborador usa este PIN na Home.'}
+              required={!isEdit}
+            >
+              <Input
+                id={`perfil-pin-${uid}`}
+                name="pin"
+                inputMode="numeric"
+                maxLength={4}
+                autoComplete="off"
+                placeholder={isEdit ? '••••' : '0000'}
+                className="font-mono tracking-[0.4em]"
+              />
+            </Field>
+
+            <div className="flex items-end pb-1.5">
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={ativo}
+                  onChange={(e) => setAtivo(e.target.checked)}
+                  className="size-4 rounded border-input accent-[var(--positive)]"
+                />
+                Perfil ativo
+              </label>
+            </div>
+          </FieldGrid>
+
+          <div>
+            <p className="mb-1.5 text-sm font-medium">Subcategorias liberadas</p>
+
+            {subcategorias.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                Nenhuma subcategoria cadastrada ainda. Preencha o campo
+                &quot;Subcategoria&quot; em pelo menos uma credencial e ela aparecerá aqui.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {subcategorias.map((sub) => {
+                  const marcada = selecionadas.includes(sub)
+                  return (
+                    <button
+                      key={sub}
+                      type="button"
+                      onClick={() => alternar(sub)}
+                      aria-pressed={marcada}
+                      className={
+                        'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ' +
+                        'focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none ' +
+                        (marcada
+                          ? 'border-positive bg-positive/12 text-positive'
+                          : 'border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground')
+                      }
+                    >
+                      {marcada ? '✓ ' : ''}
+                      {sub}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Sem nenhuma marcada, o colaborador entra e não vê senha alguma. Credenciais sem
+              subcategoria nunca aparecem para perfis — apenas no acesso Master.
+            </p>
+          </div>
+
+          <FormFeedback state={state} />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" size="sm" variant={isEdit ? 'outline' : 'default'} disabled={pending}>
+              {isEdit ? <Save className="size-4" /> : <Plus className="size-4" />}
+              {pending ? 'Salvando...' : isEdit ? 'Salvar perfil' : 'Criar perfil'}
+            </Button>
+
+            {perfil ? (
+              <ConfirmDelete
+                action={deleteCofrePerfil}
+                id={perfil.id}
+                itemName={perfil.nome_colaborador}
+                label="perfil"
+              />
+            ) : null}
+          </div>
+        </>
+      )}
+    </ActionForm>
+  )
+}
+
+/** Libera um perfil travado por excesso de tentativas de PIN. */
+export function DesbloquearPerfilButton({ perfilId }: { perfilId: string }) {
+  return (
+    <ActionForm action={unlockCofrePerfil}>
+      {(pending) => (
+        <>
+          <input type="hidden" name="id" value={perfilId} />
+          <Button type="submit" size="sm" variant="outline" disabled={pending}>
+            <Unlock className="size-3.5" />
+            {pending ? 'Liberando...' : 'Desbloquear'}
+          </Button>
+        </>
+      )}
+    </ActionForm>
+  )
+}
+
+/** Cabeçalho da seção de gestão de acessos. */
+export function GestaoAcessosIcon() {
+  return <UserCog className="size-4" />
 }

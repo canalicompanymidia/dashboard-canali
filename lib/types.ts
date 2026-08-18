@@ -160,6 +160,8 @@ export interface VaultCredential {
   id: string
   service_name: string
   category: string
+  /** Subcategoria opcional. NULL = visível somente no acesso Master. */
+  subcategoria: string | null
   username: string | null
   password: string | null
   url: string | null
@@ -216,3 +218,34 @@ export interface YearContext {
   daysInYear: number
   monthsRemaining: number
 }
+
+// ---------------------------------------------------------------------------
+//  Controle de acesso do Cofre
+// ---------------------------------------------------------------------------
+
+/** Perfil de colaborador com acesso ao cofre. */
+export interface CofrePerfil {
+  id: string
+  nome_colaborador: string
+  subcategorias_permitidas: string[]
+  ativo: boolean
+  tentativas_falhas: number
+  bloqueado_ate: string | null
+  ultimo_acesso_em: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * O que a Home pode saber sobre um perfil ANTES de autenticar.
+ * Só nome e id — nunca o hash do PIN nem as permissões.
+ */
+export interface CofrePerfilPublico {
+  id: string
+  nome_colaborador: string
+}
+
+/** Quem está com o cofre aberto. */
+export type VaultAcesso =
+  | { tipo: 'master' }
+  | { tipo: 'perfil'; perfilId: string; nome: string; subcategorias: string[] }
