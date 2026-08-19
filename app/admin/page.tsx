@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   CircleAlert,
   FolderOpen,
+  HandCoins,
   KeyRound,
   Layers,
   Megaphone,
@@ -32,6 +33,12 @@ const SHORTCUTS = [
     icon: Target,
     title: 'Metas & EBITDA',
     description: 'Metas anuais e o fechamento financeiro mês a mês que alimenta o EBITDA.',
+  },
+  {
+    href: '/admin/vendas',
+    icon: HandCoins,
+    title: 'Vendas manuais',
+    description: 'Faturamento de OnProfit, TMB e outras origens sem integração automática.',
   },
   {
     href: '/admin/acoes',
@@ -194,7 +201,7 @@ export default async function AdminOverviewPage() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {SHORTCUTS.map((shortcut) => (
           <Link
             key={shortcut.href}

@@ -7,13 +7,14 @@ import {
   getBusinessDateParts,
   getYearContext,
 } from './calculations'
-import { getSupabaseServerClient } from './supabase/server'
+import { getSupabaseAdminClient, getSupabaseServerClient } from './supabase/server'
 import type {
   AnnualGoal,
   CategoryWithDocuments,
   DocumentCategory,
   DocumentItem,
   GoalProgress,
+  ManualPlatformRevenue,
   MarketingAction,
   MonthlyFinancial,
   MonthlyMetrics,
@@ -289,6 +290,64 @@ export async function getMonthlyMetrics(year?: number, month?: number): Promise<
     adSpend,
     byPlatform: byPlatform.sort((a, b) => b.grossRevenue - a.grossRevenue),
   })
+}
+
+/**
+ * Lançamentos manuais do ano, para a tela do admin.
+ *
+ * A Home não usa esta função: lá o número já chega somado pelas views. Aqui
+ * é o contrário — o admin precisa ver a parcela manual isolada para saber o
+ * que ele mesmo digitou.
+ */
+export async function getManualPlatformRevenue(year: number): Promise<ManualPlatformRevenue[]> {
+  // Service role de propósito: a tabela tem RLS sem policy de leitura, como
+  // sales_transactions. O cliente anônimo veria zero linhas — sem erro, só
+  // vazio — e a tela do admin apareceria em branco com os dados no lugar.
+  const supabase = getSupabaseAdminClient()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('manual_platform_revenue')
+    .select('*')
+    .eq('year', year)
+    .order('month', { ascending: true })
+
+  if (error || !data) return []
+
+  return data.map((row) => ({
+    ...row,
+    gross_revenue: toNumber(row.gross_revenue),
+    platform_fees: toNumber(row.platform_fees),
+    net_revenue: row.net_revenue === null ? null : toNumber(row.net_revenue),
+    sales_count: toNumber(row.sales_count),
+  })) as ManualPlatformRevenue[]
+}
+
+/**
+ * Faturamento por mês E plataforma — usado para mostrar, no admin, o que já
+ * veio de webhook antes de a pessoa lançar o mesmo mês à mão.
+ */
+export async function getMonthlyRevenueByPlatform(
+  year: number,
+): Promise<Record<string, Record<number, number>>> {
+  const supabase = await getSupabaseServerClient()
+  const mapa: Record<string, Record<number, number>> = {}
+  if (!supabase) return mapa
+
+  const { data, error } = await supabase
+    .from('v_monthly_revenue')
+    .select('month, platform, gross_revenue')
+    .eq('year', year)
+
+  if (error || !data) return mapa
+
+  for (const row of data) {
+    const platform = String(row.platform)
+    mapa[platform] ??= {}
+    const month = Number(row.month)
+    mapa[platform][month] = (mapa[platform][month] ?? 0) + toNumber(row.gross_revenue)
+  }
+  return mapa
 }
 
 // ---------------------------------------------------------------------------

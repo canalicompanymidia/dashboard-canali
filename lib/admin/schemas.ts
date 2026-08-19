@@ -187,6 +187,37 @@ export const monthlyFinancialSchema = z.object({
   notes: optionalText,
 })
 
+/**
+ * Lançamento manual de faturamento por plataforma.
+ *
+ * `gross_revenue` fica opcional de propósito: salvar a linha em branco é a
+ * forma de APAGAR o lançamento — mais direto do que espalhar 36 botões de
+ * excluir pela tela. Quem decide entre gravar e apagar é a Server Action.
+ */
+export const manualPlatformRevenueSchema = z.object({
+  year: requiredNumber.refine((value) => value >= 2000 && value <= 2100, {
+    message: 'Ano fora do intervalo.',
+  }),
+  month: requiredNumber.refine((value) => value >= 1 && value <= 12, {
+    message: 'Mês inválido.',
+  }),
+  platform: z.enum(['hotmart', 'onprofit', 'tmb', 'manual']),
+  gross_revenue: optionalNumber.refine((value) => value === null || value >= 0, {
+    message: 'O faturamento não pode ser negativo.',
+  }),
+  platform_fees: optionalNumber.refine((value) => value === null || value >= 0, {
+    message: 'As taxas não podem ser negativas.',
+  }),
+  net_revenue: optionalNumber.refine((value) => value === null || value >= 0, {
+    message: 'O líquido não pode ser negativo.',
+  }),
+  sales_count: optionalNumber.refine(
+    (value) => value === null || (value >= 0 && Number.isInteger(value)),
+    { message: 'Informe a quantidade de vendas em número inteiro.' },
+  ),
+  notes: optionalText,
+})
+
 /** Lista de links no formato "Rótulo | https://url" — uma por linha. */
 export const linkListSchema = z.preprocess(
   (value) => (value === undefined || value === null ? '' : String(value)),

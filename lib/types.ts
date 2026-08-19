@@ -47,6 +47,28 @@ export interface MonthlyFinancial {
   updated_at: string
 }
 
+/**
+ * Faturamento do mês lançado à mão para uma plataforma.
+ *
+ * É um agregado, não uma venda: existe porque OnProfit e TMB não entregaram
+ * integração automática. Somado às transações reais dentro das views, então
+ * os Blocos 1 e 2 não precisam saber a origem do número.
+ */
+export interface ManualPlatformRevenue {
+  id: string
+  year: number
+  month: number
+  platform: PlatformSource
+  gross_revenue: number
+  platform_fees: number
+  /** null = derivar de gross_revenue - platform_fees. */
+  net_revenue: number | null
+  sales_count: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface SalesTransaction {
   id: string
   platform: PlatformSource

@@ -9,6 +9,7 @@ import {
   documentSchema,
   firstIssueMessage,
   formDataToObject,
+  manualPlatformRevenueSchema,
   marketingActionSchema,
   masterPasswordSchema,
   monthlyFinancialSchema,
@@ -16,9 +17,10 @@ import {
 } from '@/lib/admin/schemas'
 import type { ActionState } from '@/lib/admin/types'
 import { encryptSecret, isVaultEncryptionConfigured } from '@/lib/crypto'
+import { PLATFORM_LABELS } from '@/lib/calculations'
 import { syncMetaAdsSpend } from '@/lib/integrations/meta-ads'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
-import { slugify } from '@/lib/utils'
+import { formatCurrency, slugify } from '@/lib/utils'
 import {
   desbloquearPerfil,
   excluirPerfil,
@@ -118,6 +120,84 @@ export async function saveMonthlyFinancial(
 
   revalidate('/admin/metas')
   return done(`Fechamento de ${String(parsed.data.month).padStart(2, '0')}/${parsed.data.year} salvo.`)
+}
+
+// ---------------------------------------------------------------------------
+//  BLOCO 2 — Faturamento lançado à mão
+// ---------------------------------------------------------------------------
+
+/**
+ * Grava (ou apaga) o faturamento manual de uma plataforma em um mês.
+ *
+ * Linha inteiramente vazia significa "remover este lançamento". Sem isso o
+ * time não teria como desfazer um valor errado nem como sair do manual
+ * quando a integração da plataforma voltar a funcionar — e um lançamento
+ * esquecido seria somado ao webhook, inflando o faturamento em silêncio.
+ */
+export async function saveManualPlatformRevenue(
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = manualPlatformRevenueSchema.safeParse(formDataToObject(formData))
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error))
+
+  const supabase = getSupabaseAdminClient()
+  if (!supabase) return NO_DB
+
+  const { year, month, platform, gross_revenue, platform_fees, net_revenue, sales_count, notes } =
+    parsed.data
+
+  const periodo = `${String(month).padStart(2, '0')}/${year}`
+  const nome = PLATFORM_LABELS[platform]
+
+  const vazio =
+    !gross_revenue && !platform_fees && !net_revenue && !sales_count && !notes
+
+  if (vazio) {
+    const { error } = await supabase
+      .from('manual_platform_revenue')
+      .delete()
+      .match({ year, month, platform })
+
+    if (error) return fail(`Erro ao remover lançamento: ${error.message}`)
+
+    revalidate('/admin/vendas')
+    revalidatePath('/admin/metas')
+    return done(`Lançamento de ${nome} em ${periodo} removido.`)
+  }
+
+  const bruto = gross_revenue ?? 0
+  const taxas = platform_fees ?? 0
+
+  // Taxa maior que o bruto zeraria o líquido derivado e provavelmente é
+  // troca de campo. Barrar aqui é melhor do que exibir um número negativo.
+  if (net_revenue === null && taxas > bruto) {
+    return fail('As taxas não podem ser maiores que o faturamento bruto.')
+  }
+
+  if (net_revenue !== null && net_revenue > bruto) {
+    return fail('O faturamento líquido não pode ser maior que o bruto.')
+  }
+
+  const { error } = await supabase.from('manual_platform_revenue').upsert(
+    {
+      year,
+      month,
+      platform,
+      gross_revenue: bruto,
+      platform_fees: taxas,
+      net_revenue,
+      sales_count: sales_count ?? 0,
+      notes,
+    },
+    { onConflict: 'year,month,platform' },
+  )
+
+  if (error) return fail(`Erro ao salvar lançamento: ${error.message}`)
+
+  revalidate('/admin/vendas')
+  revalidatePath('/admin/metas')
+  return done(`${nome} em ${periodo}: ${formatCurrency(bruto)} lançado.`)
 }
 
 // ---------------------------------------------------------------------------

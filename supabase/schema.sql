@@ -139,6 +139,35 @@ create index if not exists idx_sales_approved_period
   on public.sales_transactions (occurred_at desc)
   where status = 'approved';
 
+-- Faturamento lançado à mão, por plataforma e mês.
+-- Existe porque nem toda plataforma entrega webhook utilizável (OnProfit e
+-- TMB não entregaram). É um AGREGADO do mês, não uma transação: por isso
+-- fica fora de sales_transactions, que guarda uma linha por venda real.
+create table if not exists public.manual_platform_revenue (
+  id            uuid primary key default gen_random_uuid(),
+  year          integer                not null,
+  month         integer                not null check (month between 1 and 12),
+  platform      public.platform_source not null,
+  gross_revenue numeric(14,2)          not null default 0 check (gross_revenue >= 0),
+  platform_fees numeric(14,2)          not null default 0 check (platform_fees >= 0),
+  net_revenue   numeric(14,2)                   check (net_revenue >= 0),
+  sales_count   integer                not null default 0 check (sales_count >= 0),
+  notes         text,
+  created_at    timestamptz            not null default now(),
+  updated_at    timestamptz            not null default now(),
+  -- Um lançamento por plataforma por mês: é o que faz o upsert do admin
+  -- substituir o valor em vez de acumular duplicatas.
+  unique (year, month, platform)
+);
+
+comment on table public.manual_platform_revenue is
+  'Faturamento mensal lançado à mão, por plataforma. Somado às transações reais dentro de v_monthly_revenue e v_annual_summary.';
+comment on column public.manual_platform_revenue.net_revenue is
+  'Líquido informado manualmente. NULL faz o cálculo cair para gross_revenue - platform_fees.';
+
+create index if not exists idx_manual_revenue_periodo
+  on public.manual_platform_revenue (year, month);
+
 -- Investimento em tráfego, granularidade diária por campanha.
 create table if not exists public.ad_spend (
   id             uuid primary key default gen_random_uuid(),
@@ -387,7 +416,8 @@ begin
   foreach t in array array[
     'annual_goals', 'monthly_financials', 'sales_transactions', 'ad_spend',
     'marketing_actions', 'document_categories', 'documents',
-    'vault_credentials', 'app_settings', 'platform_fees', 'cofre_perfis'
+    'vault_credentials', 'app_settings', 'platform_fees', 'cofre_perfis',
+    'manual_platform_revenue'
   ]
   loop
     execute format('drop trigger if exists trg_%1$s_updated_at on public.%1$s', t);
@@ -406,22 +436,54 @@ end $$;
 -- =====================================================================
 
 create or replace view public.v_monthly_revenue as
+with combinado as (
+  select
+    extract(year  from (t.occurred_at at time zone 'America/Sao_Paulo'))::int as year,
+    extract(month from (t.occurred_at at time zone 'America/Sao_Paulo'))::int as month,
+    t.platform,
+    count(*) filter (where t.status = 'approved')                                           as approved_count,
+    coalesce(sum(t.gross_amount)    filter (where t.status = 'approved'), 0)                as gross_revenue,
+    coalesce(sum(t.net_amount)      filter (where t.status = 'approved'), 0)                as net_revenue,
+    coalesce(sum(t.platform_fee)    filter (where t.status = 'approved'), 0)                as platform_fees,
+    coalesce(sum(t.refunded_amount) filter (where t.status in ('refunded','chargeback')), 0) as refunded_amount,
+    count(*) filter (where t.status in ('refunded','chargeback'))                           as refund_count
+  from public.sales_transactions t
+  group by 1, 2, 3
+
+  union all
+
+  select
+    m.year,
+    m.month,
+    m.platform,
+    m.sales_count::bigint,
+    m.gross_revenue,
+    coalesce(m.net_revenue, m.gross_revenue - m.platform_fees),
+    m.platform_fees,
+    -- O lançamento manual pede o bruto já sem reembolsos.
+    0::numeric,
+    0::bigint
+  from public.manual_platform_revenue m
+)
+-- O group by externo é essencial: uma plataforma com webhook E lançamento
+-- manual no mesmo mês precisa sair em UMA linha, senão o Bloco 2 mostraria
+-- a mesma plataforma duas vezes.
 select
-  (date_trunc('month', t.occurred_at at time zone 'America/Sao_Paulo'))::date as month_start,
-  extract(year  from (t.occurred_at at time zone 'America/Sao_Paulo'))::int   as year,
-  extract(month from (t.occurred_at at time zone 'America/Sao_Paulo'))::int   as month,
-  t.platform,
-  count(*) filter (where t.status = 'approved')                                    as approved_count,
-  coalesce(sum(t.gross_amount)  filter (where t.status = 'approved'), 0)           as gross_revenue,
-  coalesce(sum(t.net_amount)    filter (where t.status = 'approved'), 0)           as net_revenue,
-  coalesce(sum(t.platform_fee)  filter (where t.status = 'approved'), 0)           as platform_fees,
-  coalesce(sum(t.refunded_amount) filter (where t.status in ('refunded','chargeback')), 0) as refunded_amount,
-  count(*) filter (where t.status in ('refunded','chargeback'))                    as refund_count
-from public.sales_transactions t
+  make_date(c.year, c.month, 1)     as month_start,
+  c.year,
+  c.month,
+  c.platform,
+  sum(c.approved_count)::bigint     as approved_count,
+  sum(c.gross_revenue)              as gross_revenue,
+  sum(c.net_revenue)                as net_revenue,
+  sum(c.platform_fees)              as platform_fees,
+  sum(c.refunded_amount)            as refunded_amount,
+  sum(c.refund_count)::bigint       as refund_count
+from combinado c
 group by 1, 2, 3, 4;
 
 comment on view public.v_monthly_revenue is
-  'Faturamento bruto/líquido por mês e plataforma. Reembolsos saem do agregado porque mudam o status da linha original.';
+  'Faturamento bruto/líquido por mês e plataforma, somando webhooks e lançamentos manuais. Reembolsos saem do agregado porque mudam o status da linha original.';
 
 create or replace view public.v_monthly_ad_spend as
 select
@@ -438,12 +500,31 @@ group by 1, 2, 3, 4;
 
 -- Consolidado anual: alimenta a barra de progresso e a projeção linear do Bloco 1.
 create or replace view public.v_annual_summary as
+with combinado as (
+  select
+    extract(year from (t.occurred_at at time zone 'America/Sao_Paulo'))::int as year,
+    coalesce(sum(t.gross_amount) filter (where t.status = 'approved'), 0)    as gross_revenue,
+    coalesce(sum(t.net_amount)   filter (where t.status = 'approved'), 0)    as net_revenue,
+    count(*) filter (where t.status = 'approved')                            as approved_count
+  from public.sales_transactions t
+  group by 1
+
+  union all
+
+  select
+    m.year,
+    coalesce(sum(m.gross_revenue), 0),
+    coalesce(sum(coalesce(m.net_revenue, m.gross_revenue - m.platform_fees)), 0),
+    coalesce(sum(m.sales_count), 0)::bigint
+  from public.manual_platform_revenue m
+  group by 1
+)
 select
-  extract(year from (t.occurred_at at time zone 'America/Sao_Paulo'))::int as year,
-  coalesce(sum(t.gross_amount) filter (where t.status = 'approved'), 0)    as gross_revenue,
-  coalesce(sum(t.net_amount)   filter (where t.status = 'approved'), 0)    as net_revenue,
-  count(*) filter (where t.status = 'approved')                            as approved_count
-from public.sales_transactions t
+  c.year,
+  sum(c.gross_revenue)          as gross_revenue,
+  sum(c.net_revenue)            as net_revenue,
+  sum(c.approved_count)::bigint as approved_count
+from combinado c
 group by 1;
 
 -- =====================================================================
@@ -579,6 +660,7 @@ alter table public.document_categories enable row level security;
 alter table public.documents           enable row level security;
 alter table public.sales_transactions  enable row level security;
 alter table public.ad_spend            enable row level security;
+alter table public.manual_platform_revenue enable row level security;
 alter table public.platform_fees       enable row level security;
 alter table public.webhook_events      enable row level security;
 alter table public.vault_credentials   enable row level security;

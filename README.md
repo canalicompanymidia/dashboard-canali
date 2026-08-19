@@ -73,6 +73,17 @@ No Supabase, abra **SQL Editor** e rode, nesta ordem:
 
 Os dois arquivos são idempotentes: rodar de novo não duplica nada.
 
+**Já tem o banco criado?** Não precisa rodar o `schema.sql` inteiro de novo —
+aplique só as migrations que faltam, em ordem, de `supabase/migrations/`:
+
+| Migration | O que adiciona |
+| --- | --- |
+| `0001_cofre_subcategorias_e_perfis.sql` | Subcategorias e perfis de acesso do cofre |
+| `0002_vendas_manuais_por_plataforma.sql` | Lançamento manual de faturamento por plataforma |
+
+Elas também são idempotentes e não destrutivas: nenhuma apaga ou reescreve dado
+existente.
+
 ### Tabelas
 
 | Tabela | Função |
@@ -80,6 +91,7 @@ Os dois arquivos são idempotentes: rodar de novo não duplica nada.
 | `annual_goals` | Metas anuais do Bloco 1 |
 | `monthly_financials` | Fechamento mensal e EBITDA (entrada manual) |
 | `sales_transactions` | Vendas normalizadas dos webhooks |
+| `manual_platform_revenue` | Faturamento mensal lançado à mão, por plataforma |
 | `ad_spend` | Investimento em tráfego, por dia e campanha |
 | `platform_fees` | Taxa padrão por plataforma (fallback) |
 | `webhook_events` | Log cru de todo webhook recebido |
@@ -94,6 +106,17 @@ Os dois arquivos são idempotentes: rodar de novo não duplica nada.
 `v_monthly_revenue`, `v_monthly_ad_spend` e `v_annual_summary` expõem **apenas
 números agregados**. É isso que permite o painel público ler faturamento sem ter
 acesso à tabela de transações.
+
+`v_monthly_revenue` e `v_annual_summary` somam duas origens: as transações reais
+dos webhooks e os lançamentos manuais de `manual_platform_revenue`. A soma
+acontece **dentro da view**, então nenhuma consulta do painel precisa saber de
+onde veio o número — e uma plataforma que tenha as duas origens no mesmo mês sai
+em uma única linha.
+
+> As tabelas com dado sensível (`sales_transactions`, `ad_spend`,
+> `manual_platform_revenue`) têm RLS ligado e **nenhuma policy de leitura**. O
+> cliente anônimo não enxerga linha nenhuma nelas — nem erro, só vazio. Leitura
+> pelo painel é sempre pelas views; leitura no admin usa a `service_role`.
 
 ---
 
@@ -297,12 +320,13 @@ idempotente e não altera nenhuma credencial existente.
 
 ## Painel administrativo
 
-`/admin` — quatro áreas:
+`/admin` — cinco áreas:
 
 | Rota | O que faz |
 | --- | --- |
 | `/admin` | Status das integrações e sincronização do Meta Ads |
 | `/admin/metas` | Metas anuais e fechamento de EBITDA mês a mês |
+| `/admin/vendas` | Faturamento manual de plataformas sem integração |
 | `/admin/acoes` | Criar, editar, **pausar** e excluir ações de marketing |
 | `/admin/documentos` | Categorias e links do repositório |
 | `/admin/cofre` | Credenciais e troca da Senha Mestre |
@@ -342,7 +366,7 @@ Ritmo necessário  = (meta − acumulado) ÷ dias restantes × 30,44
 ### Bloco 2 — Métricas do mês
 
 ```
-Faturamento bruto    = Σ vendas aprovadas
+Faturamento bruto    = Σ vendas aprovadas (webhooks + lançamentos manuais)
 Faturamento líquido  = bruto − taxas de plataforma   (reembolsos saem do agregado)
 Investimento         = Σ gasto do Meta Ads no mês
 Lucro bruto          = líquido − investimento
@@ -358,6 +382,29 @@ Ticket médio         = bruto ÷ nº de vendas aprovadas
   mesmo que o estorno chegue meses depois.
 - Todo corte de mês/ano usa o fuso **America/Sao_Paulo**, não o do servidor
   (na Vercel, UTC).
+
+#### Faturamento sem integração (OnProfit, TMB)
+
+Nem toda plataforma entrega webhook utilizável. Em `/admin/vendas` o time lança o
+**acumulado do mês** por plataforma, e esse valor é somado ao dos webhooks nos
+Blocos 1 e 2.
+
+| Campo | Regra |
+| --- | --- |
+| Bruto | Faturamento aprovado do mês, já sem reembolsos |
+| Taxas | Comissão retida pela plataforma |
+| Líquido | Em branco, é calculado como `bruto − taxas`. Preenchido, tem precedência |
+| Nº de vendas | Alimenta o contador e o ticket médio do Bloco 2 |
+
+O lançamento é **acumulado, não incremental**: `(year, month, platform)` é chave
+única, salvar de novo substitui o valor. **Para apagar**, limpe todos os campos da
+linha e salve — é assim que se sai do manual quando a integração volta a
+funcionar, sem deixar um valor órfão sendo somado ao webhook.
+
+A Hotmart não aparece na tela: a integração dela funciona, e oferecer um campo
+manual ao lado do webhook seria um convite a contar a mesma venda duas vezes. Nas
+plataformas que aparecem, a coluna *Total na Home* avisa quando o mês também tem
+venda vinda de webhook.
 
 ### Atualização em tempo real
 
