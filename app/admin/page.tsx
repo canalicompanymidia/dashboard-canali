@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import { MetaSyncButton } from '@/components/admin/meta-sync-button'
+import { auditAdSpend } from '@/lib/ad-spend-audit'
 import { isAdminGateEnabled } from '@/lib/admin/auth'
 import { runHealthChecks } from '@/lib/health'
 import { Badge } from '@/components/ui/badge'
@@ -21,7 +22,7 @@ import { isVaultEncryptionConfigured } from '@/lib/crypto'
 import { isMetaAdsConfigured, parseAccountIds } from '@/lib/integrations/meta-ads'
 import { isServiceRoleConfigured, isSupabaseConfigured } from '@/lib/supabase/config'
 import { isVaultConfigured } from '@/lib/vault'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency, monthName } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,6 +52,13 @@ const SHORTCUTS = [
     description: 'Credenciais cifradas e troca da Senha Mestre.',
   },
 ]
+
+const ORIGEM_LABELS: Record<string, string> = {
+  meta_ads: 'Meta Ads',
+  google_ads: 'Google Ads',
+  tiktok_ads: 'TikTok Ads',
+  manual: 'Lançamento manual',
+}
 
 export default async function AdminOverviewPage() {
   const vaultReady = await isVaultConfigured()
@@ -109,6 +117,7 @@ export default async function AdminOverviewPage() {
   const pending = integrations.filter((item) => !item.ok).length
 
   const health = await runHealthChecks()
+  const trafego = await auditAdSpend()
   const brokenChecks = health.filter((check) => check.status !== 'ok')
 
   return (
@@ -259,8 +268,55 @@ export default async function AdminOverviewPage() {
                 O gasto é puxado por job a cada 3 horas. Use o botão para atualizar na hora.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <MetaSyncButton disabled={!isMetaAdsConfigured() || !isServiceRoleConfigured()} />
+
+              {/* O que a Home realmente soma neste mês. A view agrupa por
+                  origem: ver as linhas separadas é a única forma de perceber
+                  que um lançamento manual antigo continua entrando na conta. */}
+              <div className="rounded-lg border border-border bg-muted/40 p-3">
+                <p className="text-xs font-medium">
+                  Investimento em {monthName(trafego.month)}/{trafego.year}
+                </p>
+
+                {trafego.erro ? (
+                  <p className="mt-1 text-xs text-destructive">{trafego.erro}</p>
+                ) : trafego.origens.length === 0 ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Nenhum gasto registrado ainda neste mês.
+                  </p>
+                ) : (
+                  <>
+                    <ul className="mt-2 space-y-1">
+                      {trafego.origens.map((origem) => (
+                        <li key={origem.platform} className="flex justify-between gap-2 text-xs">
+                          <span className="text-muted-foreground">
+                            {ORIGEM_LABELS[origem.platform] ?? origem.platform}
+                          </span>
+                          <span className="font-mono tabular-nums">
+                            {formatCurrency(origem.total)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-2 flex justify-between gap-2 border-t border-border pt-2 text-xs font-semibold">
+                      <span>Total na Home</span>
+                      <span className="font-mono tabular-nums">
+                        {formatCurrency(trafego.total)}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {trafego.possivelDuplicidade ? (
+                  <p className="mt-2 rounded bg-warning/10 px-2 py-1.5 text-xs text-warning-foreground dark:text-warning">
+                    O mesmo mês tem gasto do Meta Ads e um lançamento manual. Se o manual foi
+                    criado só para cobrir o período antes da API funcionar, ele agora está sendo
+                    somado duas vezes — apague a linha{' '}
+                    <code className="font-mono">platform = &apos;manual&apos;</code> no Supabase.
+                  </p>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
 

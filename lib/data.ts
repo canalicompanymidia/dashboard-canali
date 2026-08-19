@@ -5,7 +5,6 @@ import {
   buildMonthlyMetrics,
   emptyMonthlyMetrics,
   getBusinessDateParts,
-  getMonthDateRange,
   getYearContext,
 } from './calculations'
 import { getSupabaseServerClient } from './supabase/server'
@@ -230,8 +229,6 @@ export async function getMonthlyMetrics(year?: number, month?: number): Promise<
   const supabase = await getSupabaseServerClient()
   if (!supabase) return emptyMonthlyMetrics(targetYear, targetMonth)
 
-  const { start, end } = getMonthDateRange(targetYear, targetMonth)
-
   const [revenueResult, spendResult] = await Promise.all([
     supabase
       .from('v_monthly_revenue')
@@ -240,11 +237,14 @@ export async function getMonthlyMetrics(year?: number, month?: number): Promise<
       )
       .eq('year', targetYear)
       .eq('month', targetMonth),
+    // Lê a VIEW, não a tabela: ad_spend tem RLS sem policy de leitura, então
+    // o cliente anônimo enxerga zero linhas nela. A view é liberada para anon
+    // justamente por expor só o agregado, sem detalhe de campanha.
     supabase
-      .from('ad_spend')
-      .select('spend')
-      .gte('spend_date', start)
-      .lte('spend_date', end),
+      .from('v_monthly_ad_spend')
+      .select('total_spend')
+      .eq('year', targetYear)
+      .eq('month', targetMonth),
   ])
 
   const rows = revenueResult.data ?? []
@@ -275,7 +275,12 @@ export async function getMonthlyMetrics(year?: number, month?: number): Promise<
     },
   )
 
-  const adSpend = (spendResult.data ?? []).reduce((sum, row) => sum + toNumber(row.spend), 0)
+  // A view agrupa por plataforma: somar as linhas junta Meta Ads com
+  // eventuais lançamentos manuais.
+  const adSpend = (spendResult.data ?? []).reduce(
+    (sum, row) => sum + toNumber(row.total_spend),
+    0,
+  )
 
   return buildMonthlyMetrics({
     year: targetYear,
