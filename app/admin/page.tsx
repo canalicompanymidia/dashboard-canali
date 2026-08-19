@@ -18,7 +18,7 @@ import { runHealthChecks } from '@/lib/health'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { isVaultEncryptionConfigured } from '@/lib/crypto'
-import { isMetaAdsConfigured } from '@/lib/integrations/meta-ads'
+import { isMetaAdsConfigured, parseAccountIds } from '@/lib/integrations/meta-ads'
 import { isServiceRoleConfigured, isSupabaseConfigured } from '@/lib/supabase/config'
 import { isVaultConfigured } from '@/lib/vault'
 import { cn } from '@/lib/utils'
@@ -54,6 +54,7 @@ const SHORTCUTS = [
 
 export default async function AdminOverviewPage() {
   const vaultReady = await isVaultConfigured()
+  const contasMetaAds = parseAccountIds()
 
   const integrations = [
     {
@@ -84,7 +85,9 @@ export default async function AdminOverviewPage() {
     {
       name: 'Meta Ads',
       ok: isMetaAdsConfigured(),
-      hint: 'META_ADS_ACCESS_TOKEN + META_ADS_ACCOUNT_ID',
+      hint: isMetaAdsConfigured()
+        ? `${contasMetaAds.length} conta(s): ${contasMetaAds.join(', ')}`
+        : 'META_ADS_ACCESS_TOKEN + META_ADS_ACCOUNT_ID',
     },
     {
       name: 'Chave do cofre',

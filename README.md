@@ -167,6 +167,24 @@ granularidade diária por campanha.
 - Endpoint: `GET|POST /api/integrations/meta-ads/sync?since=YYYY-MM-DD&until=YYYY-MM-DD`
 - Protegido por `CRON_SECRET`
 
+#### Várias contas de anúncio
+
+`META_ADS_ACCOUNT_ID` aceita uma lista separada por vírgula:
+
+```
+META_ADS_ACCOUNT_ID=act_111111111111,act_222222222222,act_333333333333
+```
+
+O prefixo `act_` é opcional, contas repetidas são descartadas, e um valor único
+continua funcionando exatamente como antes.
+
+Cada conta é gravada em `ad_spend` com o próprio `account_id`, e o Bloco 2 soma
+todas — a consulta do painel filtra por data, não por conta.
+
+Se o token não tiver permissão em uma das contas, as outras **não** são
+perdidas: o que der certo é gravado e a mensagem aponta qual falhou e por quê.
+A sincronização só é considerada erro quando nenhuma conta responde.
+
 ### Importar o histórico de vendas da Hotmart (CSV)
 
 Os webhooks só capturam vendas a partir do momento em que são configurados.
