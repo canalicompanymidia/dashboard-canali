@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { DIAS_SEMANA_CODIGOS } from '@/lib/dias-semana'
+
 /**
  * Validação das entradas do painel administrativo.
  *
@@ -151,6 +153,27 @@ function enumWithDefault<T extends readonly [string, ...string[]]>(
   }, z.enum(values))
 }
 
+/**
+ * Enum opcional: ausente ou em branco vira null, valor fora da lista reprova
+ * com mensagem legível. Diferente de `enumWithDefault`, que silenciosamente
+ * troca o inválido pelo padrão — aqui um valor errado precisa aparecer.
+ */
+function optionalEnum<T extends readonly [string, ...string[]]>(values: T, message: string) {
+  return z.preprocess(
+    (value) => {
+      const text = blankToNull(value)
+      return text === null ? null : text.toUpperCase()
+    },
+    z
+      .string()
+      .nullable()
+      .refine((value) => value === null || (values as readonly string[]).includes(value), {
+        message,
+      })
+      .transform((value) => value as T[number] | null),
+  )
+}
+
 /** Checkbox/switch: só "on" e "true" contam como marcado. */
 const checkboxField = z.preprocess(
   (value) => value === 'on' || value === 'true' || value === true,
@@ -248,6 +271,10 @@ export const marketingActionSchema = z.object({
   flow_image_url: optionalUrl,
   status: enumWithDefault(['active', 'paused', 'draft', 'archived'], 'active'),
   category: optionalText,
+  dia_semana: optionalEnum(
+    DIAS_SEMANA_CODIGOS as unknown as readonly [string, ...string[]],
+    'Dia da semana inválido.',
+  ),
   target_audience: optionalText,
   owner_name: optionalText,
   owner_email: optionalText,

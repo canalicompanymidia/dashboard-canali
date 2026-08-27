@@ -3,6 +3,7 @@
 import * as React from 'react'
 import {
   ArrowUpRight,
+  CalendarDays,
   ExternalLink,
   FileText,
   Image as ImageIcon,
@@ -24,6 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { getAccent } from '@/lib/accents'
+import { getDiaSemana } from '@/lib/dias-semana'
 import type { MarketingAction } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -82,6 +84,7 @@ export function MarketingActionsBlock({ actions }: MarketingActionsBlockProps) {
 function ActionCard({ action, onOpen }: { action: MarketingAction; onOpen: () => void }) {
   const accent = getAccent(action.accent)
   const isPaused = action.status === 'paused'
+  const dia = getDiaSemana(action.dia_semana)
 
   return (
     <button
@@ -126,6 +129,15 @@ function ActionCard({ action, onOpen }: { action: MarketingAction; onOpen: () =>
           ) : (
             <Badge variant="positive">Ativa</Badge>
           )}
+
+          {/* Quando a ação acontece, legível sem abrir o modal — que é o
+              motivo de o campo existir. */}
+          {dia ? (
+            <Badge variant="outline" className="border-foreground/15 bg-muted/60">
+              <CalendarDays className="size-3" />
+              {dia.recorrente}
+            </Badge>
+          ) : null}
         </div>
 
         <h3 className="mt-2.5 text-base leading-snug font-semibold tracking-tight">
@@ -164,6 +176,7 @@ function ActionDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const accent = getAccent(action?.accent)
+  const dia = getDiaSemana(action?.dia_semana)
 
   // Cada linha de `how_it_works` vira um passo numerado do fluxo.
   const steps = React.useMemo(() => {
@@ -191,6 +204,12 @@ function ActionDialog({
                 <Badge variant={action.status === 'active' ? 'positive' : 'warning'}>
                   {action.status === 'active' ? 'Ativa' : 'Pausada'}
                 </Badge>
+                {dia ? (
+                  <Badge variant="outline" className="border-foreground/15 bg-muted/60">
+                    <CalendarDays className="size-3" />
+                    {dia.recorrente}
+                  </Badge>
+                ) : null}
               </div>
 
               <DialogTitle className="text-xl sm:text-2xl">{action.title}</DialogTitle>

@@ -80,6 +80,7 @@ aplique só as migrations que faltam, em ordem, de `supabase/migrations/`:
 | --- | --- |
 | `0001_cofre_subcategorias_e_perfis.sql` | Subcategorias e perfis de acesso do cofre |
 | `0002_vendas_manuais_por_plataforma.sql` | Lançamento manual de faturamento por plataforma |
+| `0003_dia_semana_nas_acoes.sql` | Dia da semana das ações recorrentes |
 
 Elas também são idempotentes e não destrutivas: nenhuma apaga ou reescreve dado
 existente.
@@ -256,6 +257,27 @@ Plataformas reenviam webhooks e não garantem ordem de entrega. Duas proteções
   `PURCHASE_APPROVED` atrasado não desfaz um reembolso já processado. A decisão
   acontece dentro de um `FOR UPDATE`, o que também elimina corrida entre dois
   webhooks simultâneos.
+
+---
+
+### Bloco 3 — Dia da semana das ações
+
+Ações recorrentes (webinários, lives, plantões) têm um campo opcional
+`dia_semana` que vira uma **tag no card da Home** — "Toda Quinta", "Todo
+Sábado" — visível sem abrir o modal.
+
+O banco guarda o código curto e **sem acento** (`SEG`, `TER`, `QUA`, `QUI`,
+`SEX`, `SAB`, `DOM`), validado por um `CHECK`. Todo texto exibido é montado em
+`lib/dias-semana.ts`, inclusive a concordância: *Toda* Segunda, mas *Todo*
+Sábado. Mudar o formato da tag é editar um arquivo só.
+
+`NULL` significa "não se aplica" e é o padrão — a maioria das ações não é
+semanal, e nesse caso nenhuma tag aparece.
+
+A migration `0003` faz um preenchimento inicial por conveniência: ações cujo
+**título já nomeia o dia** ("Webinário de Terça") recebem o código
+correspondente. Só onde o campo ainda está vazio — quem já escolheu um dia no
+admin não é sobrescrito.
 
 ---
 

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { deleteMarketingAction, saveMarketingAction, setActionStatus } from '@/app/admin/actions'
 import { ACCENT_OPTIONS } from '@/lib/accents'
+import { DIAS_SEMANA } from '@/lib/dias-semana'
 import type { ActionLink, MarketingAction } from '@/lib/types'
 
 const SELECT_CLASS =
@@ -61,7 +62,7 @@ export function ActionEditor({ action }: { action?: MarketingAction }) {
             </Field>
           </FieldGrid>
 
-          <FieldGrid columns={4}>
+          <FieldGrid columns={3}>
             <Field label="Categoria" htmlFor={`category-${uid}`}>
               <Input
                 id={`category-${uid}`}
@@ -69,6 +70,26 @@ export function ActionEditor({ action }: { action?: MarketingAction }) {
                 defaultValue={action?.category ?? ''}
                 placeholder="Funil, Webinário..."
               />
+            </Field>
+
+            <Field
+              label="Dia da semana"
+              htmlFor={`dia-${uid}`}
+              hint="Para ações recorrentes. Vira uma tag no card da Home."
+            >
+              <select
+                id={`dia-${uid}`}
+                name="dia_semana"
+                defaultValue={action?.dia_semana ?? ''}
+                className={SELECT_CLASS}
+              >
+                <option value="">Não se aplica</option>
+                {DIAS_SEMANA.map((dia) => (
+                  <option key={dia.codigo} value={dia.codigo}>
+                    {dia.nome}
+                  </option>
+                ))}
+              </select>
             </Field>
 
             <Field label="Status" htmlFor={`status-${uid}`}>

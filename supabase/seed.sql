@@ -35,14 +35,14 @@ on conflict (platform) do nothing;
 -- ---------------------------------------------------------------------
 insert into public.marketing_actions
   (title, slug, subtitle, description, how_it_works, status, category,
-   target_audience, owner_name, accent, links, briefings, sort_order)
+   dia_semana, target_audience, owner_name, accent, links, briefings, sort_order)
 values
   (
     'Funil de Entrada (VSL)', 'funil-entrada-vsl',
     'Aquisição fria via vídeo de vendas',
     'Principal porta de entrada da operação. Tráfego frio do Meta Ads entra numa landing page com VSL e converte direto no checkout, sem etapa humana.',
     E'1. Anúncio no Meta Ads (público frio) leva à landing page\n2. Lead assiste à VSL hospedada no Vturb\n3. CTA libera o checkout após o pitch\n4. Sequência de e-mails de recuperação para quem não comprou\n5. Remarketing para quem assistiu mais de 50%',
-    'active', 'Funil', 'Público frio — empreendedores buscando o primeiro faturamento online',
+    'active', 'Funil', null, 'Público frio — empreendedores buscando o primeiro faturamento online',
     'Time de Tráfego', 'emerald',
     '[{"label":"Landing Page","url":"#","type":"page"},{"label":"Painel Vturb","url":"https://vturb.com.br","type":"vturb"}]'::jsonb,
     '[{"label":"Briefing de Copy da VSL","url":"#"}]'::jsonb,
@@ -53,7 +53,7 @@ values
     'Sessão semanal com filtro por aplicação',
     'Webinário recorrente às terças com inscrição por formulário de aplicação. O filtro sobe o ticket médio e leva só lead qualificado ao time comercial.',
     E'1. Captação de inscritos por anúncio + lista de e-mail\n2. Formulário de aplicação qualifica o lead\n3. Lembretes por WhatsApp em D-1 e 1h antes\n4. Webinário ao vivo com oferta no final\n5. Leads aplicados vão para o time comercial no ClickUp',
-    'active', 'Webinário', 'Leads qualificados com faturamento acima de R$ 10 mil/mês',
+    'active', 'Webinário', 'TER', 'Leads qualificados com faturamento acima de R$ 10 mil/mês',
     'Time de Lançamento', 'sky',
     '[{"label":"Página de Inscrição","url":"#","type":"page"},{"label":"Board no ClickUp","url":"https://clickup.com","type":"clickup"}]'::jsonb,
     '[{"label":"Roteiro do Webinário","url":"#"}]'::jsonb,
@@ -64,7 +64,7 @@ values
     'Oferta focada em sellers de marketplace',
     'Webinário dedicado ao produto SellerUp, para vendedores que já operam em marketplaces e querem escalar margem e operação.',
     E'1. Anúncios segmentados para sellers de marketplace\n2. Inscrição direta na página do SellerUp\n3. Aquecimento por e-mail com cases\n4. Webinário com demonstração da plataforma\n5. Oferta com bônus por tempo limitado',
-    'active', 'Webinário', 'Sellers ativos em Mercado Livre, Shopee e Amazon',
+    'active', 'Webinário', null, 'Sellers ativos em Mercado Livre, Shopee e Amazon',
     'Time de Produto', 'amber',
     '[{"label":"Página do SellerUp","url":"#","type":"page"}]'::jsonb,
     '[]'::jsonb,
@@ -75,7 +75,7 @@ values
     'Solução chave na mão de e-commerce',
     'Apresentação da oferta Loja Pronta — e-commerce entregue configurado. Foco em quem quer começar sem barreira técnica.',
     E'1. Captação por anúncio com criativo de prova social\n2. Inscrição com confirmação por WhatsApp\n3. Webinário com demonstração ao vivo da loja\n4. Oferta com implementação assistida\n5. Follow-up comercial em 48h',
-    'active', 'Webinário', 'Iniciantes em e-commerce sem estrutura técnica',
+    'active', 'Webinário', null, 'Iniciantes em e-commerce sem estrutura técnica',
     'Time de Lançamento', 'rose',
     '[{"label":"Página Loja Pronta","url":"#","type":"page"}]'::jsonb,
     '[]'::jsonb,
@@ -86,7 +86,7 @@ values
     'Recorrência de alto ticket',
     'Programa de acompanhamento mensal com encontros de mentoria e suporte direto. Sustenta a receita recorrente da operação.',
     E'1. Indicação interna ou upgrade de aluno\n2. Sessão de diagnóstico com o time\n3. Contrato mensal com renovação automática\n4. Encontros quinzenais + suporte no grupo\n5. Revisão de metas a cada 30 dias',
-    'active', 'Consultoria', 'Clientes ativos com operação validada buscando escala',
+    'active', 'Consultoria', null, 'Clientes ativos com operação validada buscando escala',
     'Time de Sucesso do Cliente', 'violet',
     '[{"label":"Área de Membros (Curseduca)","url":"https://curseduca.com","type":"curseduca"}]'::jsonb,
     '[{"label":"Playbook da Consultoria","url":"#"}]'::jsonb,

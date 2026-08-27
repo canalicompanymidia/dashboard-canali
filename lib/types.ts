@@ -3,6 +3,10 @@
  * Espelham as tabelas definidas em supabase/schema.sql.
  */
 
+import type { DiaSemana } from './dias-semana'
+
+export type { DiaSemana }
+
 export type PlatformSource = 'hotmart' | 'onprofit' | 'tmb' | 'manual'
 
 export type TransactionStatus =
@@ -127,6 +131,8 @@ export interface MarketingAction {
   flow_image_url: string | null
   status: ActionStatus
   category: string | null
+  /** Dia de uma ação recorrente ('SEG'..'DOM'). null = não se aplica. */
+  dia_semana: DiaSemana | null
   target_audience: string | null
   owner_name: string | null
   owner_email: string | null

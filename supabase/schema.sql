@@ -235,6 +235,11 @@ create table if not exists public.marketing_actions (
   status          public.action_status not null default 'active',
   category        text,                                  -- Funil, Webinário, Consultoria...
   target_audience text,
+  -- Dia da semana de uma ação recorrente. Código curto e sem acento ('SAB',
+  -- não 'SÁB'): estável, cabe no CHECK e não depende de collation. O texto
+  -- exibido ("Toda Quinta") é montado na aplicação. NULL = não se aplica.
+  dia_semana      text
+    check (dia_semana is null or dia_semana in ('SEG','TER','QUA','QUI','SEX','SAB','DOM')),
   owner_name      text,
   owner_email     text,
   accent          text                 not null default 'emerald',
