@@ -477,7 +477,15 @@ lib/
 supabase/
 ├── schema.sql                  Estrutura completa
 └── seed.sql                    Dados iniciais
+
+public/landing/
+├── index.html                  Landing page da Canali Company (HTML + Tailwind CDN + JS puro)
+└── assets/                     Fotos e prints da landing (ver assets/README.md)
 ```
+
+A landing page é independente do painel: um único arquivo, sem build. Abra o
+`public/landing/index.html` no navegador para conferir, ou acesse
+`/landing/index.html` no domínio publicado.
 
 ---
 
