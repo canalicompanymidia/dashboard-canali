@@ -35,11 +35,15 @@ export const REQUISITOS: RequisitoSenha[] = [
   { id: 'numero', rotulo: 'Um número', atende: (s) => /\d/.test(s) },
   {
     id: 'especial',
-    rotulo: 'Um caractere especial (!@#$%…)',
-    // Qualquer coisa que não seja letra, número ou espaço. Definir por
-    // exclusão aceita acentuação e símbolos de teclado ABNT, que uma
-    // lista fixa deixaria de fora.
-    atende: (s) => /[^A-Za-z0-9\s]/.test(s),
+    rotulo: 'Um símbolo (!@#$%&*…)',
+    // Exatamente a lista que o Supabase aceita como símbolo:
+    //   !@#$%^&*()_+-=[]{};'\:"|<>?,./`~
+    //
+    // Definir por exclusão (qualquer coisa que não fosse letra ou número)
+    // era mais permissivo e criava uma armadilha: "Senhaç1A" passava aqui
+    // porque `ç` não é [A-Za-z], e o Supabase recusava na hora de salvar.
+    // A pessoa via cinco itens verdes e levava erro assim mesmo.
+    atende: (s) => /[!@#$%^&*()_+\-=[\]{};'\\:"|<>?,./`~]/.test(s),
   },
 ]
 
