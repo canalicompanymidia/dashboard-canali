@@ -8,8 +8,8 @@ import { getColaborador } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 const ERROS: Record<string, string> = {
-  link: 'O link de acesso estava incompleto. Peça um novo abaixo.',
-  expirado: 'Este link já foi usado ou expirou. Peça um novo abaixo.',
+  link: 'O link estava incompleto. Use "Esqueci minha senha" para receber outro.',
+  expirado: 'Este link já foi usado ou expirou. Use "Esqueci minha senha" para receber outro.',
   config: 'O servidor está sem as credenciais do Supabase. Avise o responsável técnico.',
 }
 
@@ -30,7 +30,7 @@ export default async function LoginPage({
           <CanaliLogo className="h-9 w-auto text-foreground" />
           <h1 className="mt-4 text-lg font-semibold tracking-tight">Hub Canali Company</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Área interna. O acesso é liberado por e-mail, um a um.
+            Área interna. Cada pessoa tem o próprio login.
           </p>
         </div>
 

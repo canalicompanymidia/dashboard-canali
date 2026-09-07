@@ -1,13 +1,13 @@
 'use client'
 
-import { Check, Plus, Trash2, UserRound } from 'lucide-react'
+import { Check, Plus, Send, Trash2, UserRound } from 'lucide-react'
 
 import { ActionForm, FormFeedback } from '@/components/admin/action-form'
 import { Field, FieldGrid } from '@/components/admin/field'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { deleteColaborador, saveColaborador } from '@/app/admin/actions'
+import { deleteColaborador, enviarAcesso, saveColaborador } from '@/app/admin/actions'
 import { cn, formatDateTime } from '@/lib/utils'
 
 export interface ColaboradorRow {
@@ -69,7 +69,7 @@ export function ColaboradoresAdmin({
 
                 <div className="flex items-end">
                   <Button type="submit" className="w-full" disabled={pending}>
-                    {pending ? 'Salvando...' : 'Liberar acesso'}
+                    {pending ? 'Salvando...' : 'Adicionar'}
                   </Button>
                 </div>
               </FieldGrid>
@@ -175,6 +175,35 @@ export function ColaboradoresAdmin({
                     </>
                   )}
                 </ActionForm>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <ActionForm action={enviarAcesso}>
+                    {(pending, state) => (
+                      <>
+                        <input type="hidden" name="email" value={pessoa.email} />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="outline"
+                          disabled={pending || !pessoa.ativo}
+                          title={
+                            pessoa.ativo
+                              ? 'Envia o e-mail para a pessoa criar a senha dela'
+                              : 'Reative o acesso antes de enviar'
+                          }
+                        >
+                          <Send className="size-3.5" />
+                          {pending
+                            ? 'Enviando...'
+                            : pessoa.ultimo_acesso_em
+                              ? 'Reenviar acesso'
+                              : 'Enviar convite'}
+                        </Button>
+                        {state ? <FormFeedback state={state} className="mt-1.5" /> : null}
+                      </>
+                    )}
+                  </ActionForm>
+                </div>
 
                 {ehVoce ? null : (
                   <ActionForm action={deleteColaborador} className="mt-2">

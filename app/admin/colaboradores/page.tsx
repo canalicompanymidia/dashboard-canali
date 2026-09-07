@@ -58,9 +58,11 @@ export default async function AdminColaboradoresPage() {
             <ShieldCheck className="mt-0.5 size-4 shrink-0" />
             <div className="space-y-1">
               <p>
-                A pessoa entra pedindo um <strong className="text-foreground">link por e-mail</strong>
-                {' '}— não há senha para criar, compartilhar ou esquecer. O link vale uma hora e só
-                funciona uma vez.
+                <strong className="text-foreground">Adicione o e-mail e clique em Enviar
+                convite.</strong> A pessoa recebe um link para criar a{' '}
+                <strong className="text-foreground">senha individual dela</strong> — mínimo de 8
+                caracteres, com maiúscula, minúscula, número e caractere especial. O link vale uma
+                hora e só funciona uma vez.
               </p>
               <p>
                 <strong className="text-foreground">Desmarcar &quot;Ativo&quot; corta o acesso na

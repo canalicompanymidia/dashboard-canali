@@ -297,15 +297,42 @@ admin não é sobrescrito.
 
 ## Segurança e acesso
 
-O Hub é **área interna**: nenhuma página abre sem login. O acesso é individual,
-por link mágico enviado ao e-mail — não há senha para criar, compartilhar ou
-esquecer.
+O Hub é **área interna**: nenhuma página abre sem login. Cada pessoa tem
+**e-mail e senha próprios** — não existe senha compartilhada de equipe.
+
+### Senha
+
+Mínimo de **8 caracteres**, com pelo menos **uma maiúscula, uma minúscula, um
+número e um caractere especial**. A regra vive em `lib/senha.ts` e é aplicada
+duas vezes: no formulário (marcando os requisitos enquanto a pessoa digita) e
+no servidor, que é a barreira que vale.
+
+> **Ligue a mesma política no Supabase**, em *Authentication → Policies*:
+> tamanho mínimo 8 e "Lowercase, uppercase, digits and symbols". A validação
+> deste repositório protege o formulário do Hub; a API de auth do Supabase
+> aceita chamada direta e precisa da própria regra.
+
+O time entra assim: um admin adiciona o e-mail em `/admin/colaboradores` e
+clica em **Enviar convite**. A pessoa recebe um link (uma hora, uso único),
+escolhe a senha e já entra. O mesmo botão reenvia para quem esqueceu.
+
+### O que a senha resolve — e o que não resolve
+
+A senha faz o invasor precisar de **duas** coisas em vez de uma. Mas enquanto
+existir "esqueci minha senha" por e-mail, **a caixa postal segue sendo a chave
+de recuperação**: quem invadir o e-mail pede a redefinição e entra. A mitigação
+implementada é o rastro — a redefinição gera um e-mail visível na caixa da
+pessoa, e o texto da tela orienta a avisar um admin se ela não pediu.
+
+Quem quiser fechar isso de vez precisa de **2FA (código de 6 dígitos)**: aí nem
+com o e-mail invadido se entra. O Supabase suporta TOTP; ainda não está
+implementado aqui.
 
 ### As duas checagens, e por que são duas
 
 | Checagem | O que prova | Sozinha basta? |
 | --- | --- | --- |
-| Sessão do Supabase | a pessoa é dona daquele e-mail | **Não** — qualquer um cria conta no Supabase |
+| Sessão do Supabase | a pessoa sabe a senha daquele e-mail | **Não** — qualquer um cria conta no Supabase |
 | `colaboradores_autorizados` | aquele e-mail foi liberado pela Canali | **Sim**, é esta que autoriza |
 
 Ambas são refeitas do banco a cada requisição, nunca gravadas no cookie.

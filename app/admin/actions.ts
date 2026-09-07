@@ -1,5 +1,6 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
 import {
@@ -17,7 +18,7 @@ import {
   vaultCredentialSchema,
 } from '@/lib/admin/schemas'
 import type { ActionState } from '@/lib/admin/types'
-import { getColaborador } from '@/lib/auth'
+import { buscarColaborador, getColaborador } from '@/lib/auth'
 import { encryptSecret, isVaultEncryptionConfigured } from '@/lib/crypto'
 import { PLATFORM_LABELS } from '@/lib/calculations'
 import { syncMetaAdsSpend } from '@/lib/integrations/meta-ads'
@@ -56,6 +57,14 @@ function fail(message: string): ActionState {
 
 function done(message: string): ActionState {
   return { ok: true, message }
+}
+
+/** Base da URL desta instalação — os links de e-mail precisam voltar para cá. */
+async function origemDaRequisicao(): Promise<string> {
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? ''
+  const protocolo = h.get('x-forwarded-proto') ?? 'https'
+  return `${protocolo}://${host}`
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +116,57 @@ export async function saveColaborador(
   return done(
     id ? `Acesso de ${email} atualizado.` : `${email} agora pode entrar no Hub.`,
   )
+}
+
+/**
+ * Dispara o e-mail para a pessoa criar (ou recriar) a senha dela.
+ *
+ * Um botão só para os dois casos: quem nunca entrou recebe um convite,
+ * quem já tem conta recebe um link de redefinição. O Supabase recusa
+ * convidar um e-mail já cadastrado, então a segunda tentativa cobre esse
+ * retorno em vez de devolver um erro que o admin não saberia interpretar.
+ */
+export async function enviarAcesso(
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  const autor = await getColaborador()
+  if (autor?.papel !== 'admin') return fail('Apenas administradores podem enviar acessos.')
+
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  if (!email) return fail('E-mail não informado.')
+
+  const alvo = await buscarColaborador(email)
+  if (!alvo) return fail('Este e-mail não está na lista de autorizados, ou está desativado.')
+
+  const supabase = getSupabaseAdminClient()
+  if (!supabase) return NO_DB
+
+  const destino = `${await origemDaRequisicao()}/auth/callback?destino=%2Fdefinir-senha`
+
+  const { error: erroConvite } = await supabase.auth.admin.inviteUserByEmail(email, {
+    redirectTo: destino,
+  })
+
+  if (!erroConvite) {
+    return done(`Convite enviado para ${email}. A pessoa cria a senha pelo link.`)
+  }
+
+  // Já tem conta: o caminho certo é redefinir, não convidar.
+  const jaExiste =
+    erroConvite.status === 422 || /already|registered|exists/i.test(erroConvite.message)
+
+  if (!jaExiste) {
+    return fail(`Não foi possível enviar: ${erroConvite.message}`)
+  }
+
+  const { error: erroReset } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: destino,
+  })
+
+  if (erroReset) return fail(`Não foi possível enviar o link: ${erroReset.message}`)
+
+  return done(`${email} já tinha conta — enviamos um link para criar uma nova senha.`)
 }
 
 /** Remove alguém da lista. O acesso cai na consulta seguinte. */
