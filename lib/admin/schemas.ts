@@ -284,6 +284,27 @@ export const marketingActionSchema = z.object({
   sort_order: optionalNumber,
 })
 
+export const colaboradorSchema = z.object({
+  id: optionalText,
+  email: z.preprocess(
+    (value) => {
+      const texto = blankToNull(value)
+      return texto === null ? null : texto.toLowerCase()
+    },
+    z
+      .string()
+      .nullable()
+      .refine((value) => value !== null, { message: 'Informe o e-mail.' })
+      .refine((value) => value === null || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value), {
+        message: 'E-mail inválido.',
+      })
+      .transform((value) => value as string),
+  ),
+  nome: optionalText,
+  papel: enumWithDefault(['colaborador', 'admin'], 'colaborador'),
+  ativo: checkboxField,
+})
+
 export const documentCategorySchema = z.object({
   id: optionalText,
   name: requiredText('Informe o nome da categoria.', 80),

@@ -4,13 +4,20 @@ import { Settings2 } from 'lucide-react'
 import { CanaliLogo } from '@/components/layout/canali-logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { Button } from '@/components/ui/button'
+import { getColaborador } from '@/lib/auth'
 import { formatDate } from '@/lib/utils'
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  // Nas telas de login e "sem acesso" não há colaborador — e mostrar um
+  // botão "Admin" ali seria oferecer uma porta que devolve a pessoa para
+  // a mesma tela. O papel também decide: colaborador comum não vê o
+  // atalho de um painel que não pode abrir.
+  const colaborador = await getColaborador()
+
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="group flex items-center gap-2.5">
+        <Link href={colaborador ? '/' : '/login'} className="group flex items-center gap-2.5">
           {/* Altura travada em 32px (a mesma do antigo selo "CC"); a largura
               acompanha a proporção da marca. Densidade compacta: a versão
               cheia vira borrão neste tamanho. */}
@@ -27,12 +34,14 @@ export function SiteHeader() {
           </span>
 
           {/* O botão "Painel" saiu: a marca à esquerda já leva para a Home. */}
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/admin">
-              <Settings2 className="size-4" />
-              <span className="hidden sm:inline">Admin</span>
-            </Link>
-          </Button>
+          {colaborador?.papel === 'admin' ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/admin">
+                <Settings2 className="size-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </Link>
+            </Button>
+          ) : null}
 
           <ThemeToggle />
         </div>

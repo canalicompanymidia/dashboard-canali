@@ -15,13 +15,14 @@ credencial no WhatsApp e link no Drive.
 3. [Banco de dados](#banco-de-dados)
 4. [Variáveis de ambiente](#variáveis-de-ambiente)
 5. [Integrações](#integrações)
-6. [Cofre de senhas](#cofre-de-senhas)
-7. [Painel administrativo](#painel-administrativo)
-8. [Como as contas são feitas](#como-as-contas-são-feitas)
-9. [Estrutura do projeto](#estrutura-do-projeto)
-10. [Deploy](#deploy)
-11. [Segurança](#segurança)
-12. [Ajustes que podem ser necessários](#ajustes-que-podem-ser-necessários)
+6. [Segurança e acesso](#segurança-e-acesso)
+7. [Cofre de senhas](#cofre-de-senhas)
+8. [Painel administrativo](#painel-administrativo)
+9. [Como as contas são feitas](#como-as-contas-são-feitas)
+10. [Estrutura do projeto](#estrutura-do-projeto)
+11. [Deploy](#deploy)
+12. [Práticas de código](#práticas-de-código)
+13. [Ajustes que podem ser necessários](#ajustes-que-podem-ser-necessários)
 
 ---
 
@@ -81,6 +82,14 @@ aplique só as migrations que faltam, em ordem, de `supabase/migrations/`:
 | `0001_cofre_subcategorias_e_perfis.sql` | Subcategorias e perfis de acesso do cofre |
 | `0002_vendas_manuais_por_plataforma.sql` | Lançamento manual de faturamento por plataforma |
 | `0003_dia_semana_nas_acoes.sql` | Dia da semana das ações recorrentes |
+| `0004a_colaboradores_autorizados.sql` | Lista de quem pode entrar (**não quebra nada**) |
+| `0004b_fechar_acesso_anonimo.sql` | Fecha o acesso público (**só depois do login no ar**) |
+| `0005_bloqueio_da_senha_mestre.sql` | Bloqueio por tentativas na Senha Mestre |
+
+> **Ordem obrigatória da 0004.** Rode a `0004a`, publique o código com a tela
+> de login, entre no Hub e confirme que funciona — só então rode a `0004b`.
+> Invertendo, o Hub fica em branco para todo mundo. O rollback de emergência
+> está comentado no fim da própria `0004b`.
 
 Elas também são idempotentes e não destrutivas: nenhuma apaga ou reescreve dado
 existente.
@@ -93,6 +102,7 @@ existente.
 | `monthly_financials` | Fechamento mensal e EBITDA (entrada manual) |
 | `sales_transactions` | Vendas normalizadas dos webhooks |
 | `manual_platform_revenue` | Faturamento mensal lançado à mão, por plataforma |
+| `colaboradores_autorizados` | E-mails com permissão de entrar no Hub |
 | `ad_spend` | Investimento em tráfego, por dia e campanha |
 | `platform_fees` | Taxa padrão por plataforma (fallback) |
 | `webhook_events` | Log cru de todo webhook recebido |
@@ -105,8 +115,12 @@ existente.
 ### Views
 
 `v_monthly_revenue`, `v_monthly_ad_spend` e `v_annual_summary` expõem **apenas
-números agregados**. É isso que permite o painel público ler faturamento sem ter
-acesso à tabela de transações.
+números agregados**. É isso que permite o painel mostrar faturamento sem dar a
+ninguém acesso à tabela de transações — nem a um colaborador autorizado.
+
+Como são `SECURITY DEFINER`, ignoram o RLS das tabelas de baixo; por isso cada
+uma carrega a checagem `public.pode_ver_agregados()` na própria definição. Ver
+[Segurança e acesso](#segurança-e-acesso).
 
 `v_monthly_revenue` e `v_annual_summary` somam duas origens: as transações reais
 dos webhooks e os lançamentos manuais de `manual_platform_revenue`. A soma
@@ -281,6 +295,83 @@ admin não é sobrescrito.
 
 ---
 
+## Segurança e acesso
+
+O Hub é **área interna**: nenhuma página abre sem login. O acesso é individual,
+por link mágico enviado ao e-mail — não há senha para criar, compartilhar ou
+esquecer.
+
+### As duas checagens, e por que são duas
+
+| Checagem | O que prova | Sozinha basta? |
+| --- | --- | --- |
+| Sessão do Supabase | a pessoa é dona daquele e-mail | **Não** — qualquer um cria conta no Supabase |
+| `colaboradores_autorizados` | aquele e-mail foi liberado pela Canali | **Sim**, é esta que autoriza |
+
+Ambas são refeitas do banco a cada requisição, nunca gravadas no cookie.
+Desmarcar "Ativo" em `/admin/colaboradores` corta o acesso **na tela seguinte**,
+inclusive de quem já está com a sessão aberta. É o botão para quando alguém sai
+da empresa.
+
+### Por que a trava tem que estar no banco
+
+A chave `NEXT_PUBLIC_SUPABASE_ANON_KEY` viaja dentro do JavaScript que o
+navegador baixa — qualquer visitante consegue extraí-la e chamar a API REST do
+Supabase **direto, sem passar pelo Next.js**. Uma senha no site não fecharia
+esse caminho.
+
+Por isso a autorização vive no PostgreSQL:
+
+- As policies de RLS liberam leitura só para `authenticated` **e** com
+  `public.eh_colaborador()` verdadeiro. O papel `anon` não aparece em policy
+  nenhuma, e os grants dele foram revogados.
+- As views agregadas são `SECURITY DEFINER` (ignoram o RLS de baixo, que é o
+  que permite mostrar faturamento sem expor a tabela de transações). Como o
+  acesso a elas depende de `GRANT` e não de policy, a checagem entra **dentro
+  da própria view**, via `public.pode_ver_agregados()`.
+
+Matriz verificada em PostgreSQL, com `auth.jwt()` real:
+
+| Quem | O que enxerga |
+| --- | --- |
+| Anônimo (chave do navegador) | `permission denied` — nada |
+| Autenticado, fora da lista | 0 linhas |
+| Autenticado, desativado | 0 linhas |
+| Colaborador autorizado | os dados |
+| `service_role` (o servidor) | tudo |
+
+### Camadas
+
+1. **Middleware** — sem sessão, redireciona para `/login`. Camada de
+   experiência; se falhasse, as consultas ainda voltariam vazias.
+2. **`requireColaborador()` / `requireAdmin()`** nas páginas e Server Actions.
+3. **RLS + guarda das views** no banco. É a que vale.
+
+Rotas propositalmente fora do login: `/login`, `/auth/*`, `/sem-acesso`,
+`/landing` (marketing público) e `/api/webhooks/*` + `/api/integrations/*` —
+estas se autenticam por **segredo no header**, não por sessão de navegador.
+Exigir login nelas quebraria a entrada de vendas da Hotmart e o job do Meta Ads.
+
+### Outras medidas
+
+- **Senha Mestre com bloqueio**: 5 erros → 15 minutos, contados atomicamente
+  sob `FOR UPDATE`. Acertar durante o bloqueio **não** libera.
+- **Cofre atrás do login**: tentar Senha Mestre ou PIN exige antes um e-mail
+  autorizado. A força bruta saiu da internet aberta.
+- **`/api/metrics` e `/api/vault/profiles` exigem sessão.** A segunda devolvia
+  a lista de nomes do time sem pedir nada.
+- **Headers**: `frame-ancestors 'none'` (anti-clickjacking), HSTS, `nosniff`,
+  `Referrer-Policy`, `Permissions-Policy` e `noindex` — exceto em `/landing`,
+  que é público de propósito.
+- **Sem credencial de ambiente, o app fecha em vez de abrir.** Uma variável
+  perdida não pode virar Hub aberto na internet.
+
+> **CSP:** o `script-src` ficou de fora de propósito. Fechá-lo exigiria nonce
+> em todo script inline que o Next injeta, com risco real de quebrar o app; as
+> quatro diretivas aplicadas barram ataques concretos sem essa dívida.
+
+---
+
 ## Cofre de senhas
 
 Modelo de segurança em camadas:
@@ -348,6 +439,7 @@ idempotente e não altera nenhuma credencial existente.
 | --- | --- |
 | `/admin` | Status das integrações e sincronização do Meta Ads |
 | `/admin/metas` | Metas anuais e fechamento de EBITDA mês a mês |
+| `/admin/colaboradores` | Quem pode entrar no Hub |
 | `/admin/vendas` | Faturamento manual de plataformas sem integração |
 | `/admin/acoes` | Criar, editar, **pausar** e excluir ações de marketing |
 | `/admin/documentos` | Categorias e links do repositório |
@@ -356,12 +448,11 @@ idempotente e não altera nenhuma credencial existente.
 Todas as escritas passam por Server Actions com validação Zod e revalidação
 automática da Home.
 
-**Proteção opcional:** a especificação define o painel como público para o time,
-e é assim que ele funciona por padrão. Como `/admin` grava no banco, existe a
-variável `ADMIN_PASSWORD`: definindo-a, o `/admin` passa a exigir login (sessão
-de 8 horas, cookie assinado por HMAC). Sem ela, nada muda — e um aviso aparece no
-próprio painel. O cofre exige a Senha Mestre nos dois casos, inclusive para
-gravar credenciais.
+**Acesso ao painel:** `/admin` exige papel `admin` na lista de colaboradores.
+A checagem está no `layout.tsx` do `/admin`, então cobre todas as subrotas —
+inclusive as que forem criadas depois. As Server Actions que mexem em acessos
+conferem a permissão por conta própria, porque uma Server Action é um endpoint
+HTTP e pode ser chamada sem passar por tela nenhuma.
 
 ---
 
@@ -509,11 +600,14 @@ npm run typecheck  # checagem de tipos
 
 ---
 
-## Segurança
+## Práticas de código
 
-- **RLS ativo** em todas as tabelas. Conteúdo editorial é leitura pública;
-  transações, cofre, logs e configurações não têm policy alguma — só a
-  `service_role` acessa, e ela só existe no servidor.
+Complementam a seção [Segurança e acesso](#segurança-e-acesso), que cobre
+login e permissões.
+
+- **RLS ativo** em todas as tabelas. Conteúdo editorial exige colaborador
+  autorizado; transações, cofre, logs e configurações não têm policy alguma —
+  só a `service_role` acessa, e ela só existe no servidor.
 - **`server-only`** nos módulos sensíveis: se alguém importar `lib/crypto.ts` ou
   `lib/vault.ts` em um componente de cliente, o build quebra em vez de vazar.
 - **Comparações em tempo constante** (`timingSafeEqual`) em senhas, assinaturas

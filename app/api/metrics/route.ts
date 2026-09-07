@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { getColaborador } from '@/lib/auth'
 import { getBusinessDateParts } from '@/lib/calculations'
 import { getMonthlyMetrics } from '@/lib/data'
 
@@ -14,6 +15,13 @@ export const dynamic = 'force-dynamic'
  * servidor, e o cliente nunca precisa ler a tabela de transações.
  */
 export async function GET(request: Request) {
+  // Esta rota devolve o faturamento do mês em JSON. Sem esta checagem ela
+  // era a porta dos fundos do Bloco 2: bastava a URL, sem passar por
+  // nenhuma tela.
+  if (!(await getColaborador())) {
+    return NextResponse.json({ ok: false, error: 'Não autorizado.' }, { status: 401 })
+  }
+
   const params = new URL(request.url).searchParams
   const today = getBusinessDateParts()
 

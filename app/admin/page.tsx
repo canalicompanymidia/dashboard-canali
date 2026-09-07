@@ -7,15 +7,14 @@ import {
   KeyRound,
   Layers,
   Megaphone,
-  ShieldAlert,
   Stethoscope,
   Target,
+  Users,
   Webhook,
 } from 'lucide-react'
 
 import { MetaSyncButton } from '@/components/admin/meta-sync-button'
 import { auditAdSpend } from '@/lib/ad-spend-audit'
-import { isAdminGateEnabled } from '@/lib/admin/auth'
 import { runHealthChecks } from '@/lib/health'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -57,6 +56,12 @@ const SHORTCUTS = [
     icon: KeyRound,
     title: 'Cofre de senhas',
     description: 'Credenciais cifradas e troca da Senha Mestre.',
+  },
+  {
+    href: '/admin/colaboradores',
+    icon: Users,
+    title: 'Acessos',
+    description: 'Quem pode entrar no Hub. Desativar aqui corta o acesso na hora.',
   },
 ]
 
@@ -183,23 +188,9 @@ export default async function AdminOverviewPage() {
         </CardContent>
       </Card>
 
-      {isAdminGateEnabled() ? null : (
-        <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/8 p-4">
-          <ShieldAlert className="mt-0.5 size-4.5 shrink-0 text-warning-foreground dark:text-warning" />
-          <div className="text-sm">
-            <p className="font-semibold">Painel administrativo sem senha</p>
-            <p className="mt-1 text-muted-foreground">
-              Qualquer pessoa com o link consegue alterar metas, ações e documentos. Para exigir
-              login, defina a variável{' '}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                ADMIN_PASSWORD
-              </code>{' '}
-              e reinicie o servidor. O cofre de senhas já é protegido pela Senha Mestre,
-              independentemente desta configuração.
-            </p>
-          </div>
-        </div>
-      )}
+      {/* O aviso de "painel sem senha" saiu junto com o ADMIN_PASSWORD:
+          o /admin agora exige login individual com papel de admin, e o
+          layout barra antes de renderizar qualquer coisa. */}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {SHORTCUTS.map((shortcut) => (

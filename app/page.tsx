@@ -1,3 +1,5 @@
+import { LogOut } from 'lucide-react'
+
 import { AnnualGoalsBlock } from '@/components/home/annual-goals-block'
 import { MarketingActionsBlock } from '@/components/home/marketing-actions-block'
 import { MonthlyMetricsBlock } from '@/components/home/monthly-metrics-block'
@@ -10,12 +12,17 @@ import {
   getMonthlyMetrics,
 } from '@/lib/data'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
+import { requireColaborador, type Colaborador } from '@/lib/auth'
 import { isVaultConfigured } from '@/lib/vault'
 
 // O painel mostra faturamento do dia: nada aqui pode ficar em cache.
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
+  // Nada é buscado antes de saber quem está pedindo. O middleware já
+  // barrou quem não tem sessão; aqui confirmamos que a pessoa continua
+  // na lista de autorizados — que pode ter mudado depois do login.
+  const colaborador = await requireColaborador()
   const configured = isSupabaseConfigured()
 
   // Os quatro blocos são independentes — buscar em paralelo evita empilhar
@@ -31,7 +38,7 @@ export default async function HomePage() {
   return (
     <div className="hero-surface">
       <div className="mx-auto max-w-[1600px] space-y-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <PageIntro year={goalsData.context.year} />
+        <PageIntro year={goalsData.context.year} colaborador={colaborador} />
 
         {configured ? null : <SetupBanner />}
 
@@ -51,11 +58,14 @@ export default async function HomePage() {
   )
 }
 
-function PageIntro({ year }: { year: number }) {
+function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborador }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Hub Canali Company</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {colaborador.nome ? `Olá, ${colaborador.nome.split(' ')[0]}` : colaborador.email}
+        </p>
       </div>
 
       <nav className="no-print flex flex-wrap gap-1.5 text-xs" aria-label="Navegação dos blocos">
@@ -76,6 +86,18 @@ function PageIntro({ year }: { year: number }) {
         <span className="rounded-full border border-border bg-card px-3 py-1.5 font-medium shadow-xs tabular">
           {year}
         </span>
+
+        {/* POST e não link: um GET de logout pode ser disparado por um
+            <img> em qualquer site e derrubar a sessão sem a pessoa pedir. */}
+        <form action="/auth/sair" method="post">
+          <button
+            type="submit"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 font-medium shadow-xs transition-colors hover:bg-accent"
+          >
+            <LogOut className="size-3.5" />
+            Sair
+          </button>
+        </form>
       </nav>
     </div>
   )

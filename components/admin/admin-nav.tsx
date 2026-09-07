@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FolderOpen, HandCoins, KeyRound, LayoutGrid, Layers, Target } from 'lucide-react'
+import { FolderOpen, HandCoins, KeyRound, LayoutGrid, Layers, Target, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -13,6 +13,7 @@ const LINKS = [
   { href: '/admin/acoes', label: 'Ações de marketing', icon: Layers },
   { href: '/admin/documentos', label: 'Documentos', icon: FolderOpen },
   { href: '/admin/cofre', label: 'Cofre de senhas', icon: KeyRound },
+  { href: '/admin/colaboradores', label: 'Acessos', icon: Users },
 ]
 
 export function AdminNav() {

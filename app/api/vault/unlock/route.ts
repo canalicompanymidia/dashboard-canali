@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { getColaborador } from '@/lib/auth'
 import { getVaultConteudo, unlockVault, unlockVaultWithPin } from '@/lib/vault'
 
 export const runtime = 'nodejs'
@@ -16,6 +17,13 @@ export const dynamic = 'force-dynamic'
  * resposta — uma ida ao servidor em vez de duas.
  */
 export async function POST(request: Request) {
+  // Antes de qualquer tentativa de senha, é preciso estar logado. Isso
+  // tira a força bruta do cofre da internet aberta: quem quiser tentar
+  // Senha Mestre ou PIN precisa primeiro provar um e-mail autorizado.
+  if (!(await getColaborador())) {
+    return NextResponse.json({ ok: false, error: 'Não autorizado.' }, { status: 401 })
+  }
+
   let corpo: Record<string, unknown>
 
   try {

@@ -433,6 +433,78 @@ begin
 end $$;
 
 -- =====================================================================
+--  CONTROLE DE ACESSO
+-- ---------------------------------------------------------------------
+--  Precede as views porque elas chamam estas funções.
+-- =====================================================================
+
+-- Quem pode entrar no Hub. Estar autenticado no Supabase NÃO basta:
+-- qualquer pessoa consegue criar uma conta lá. O que autoriza é constar
+-- aqui, ativo.
+create table if not exists public.colaboradores_autorizados (
+  id               uuid primary key default gen_random_uuid(),
+  email            text        not null,
+  papel            text        not null default 'colaborador'
+                   check (papel in ('admin', 'colaborador')),
+  nome             text,
+  ativo            boolean     not null default true,
+  ultimo_acesso_em timestamptz,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+create unique index if not exists idx_colaboradores_email_unico
+  on public.colaboradores_autorizados (lower(email));
+
+-- Contador de tentativas da Senha Mestre. Linha única — o cofre é um.
+create table if not exists public.cofre_master_tentativas (
+  id                boolean primary key default true check (id),
+  tentativas_falhas integer not null default 0,
+  bloqueado_ate     timestamptz,
+  ultima_tentativa  timestamptz
+);
+insert into public.cofre_master_tentativas (id) values (true) on conflict do nothing;
+
+-- SECURITY DEFINER de propósito: precisam ler a tabela acima, que o
+-- próprio usuário não enxerga. Devolvem só true/false, nunca conteúdo.
+-- search_path fixo fecha o sequestro de nome de tabela, que é o risco
+-- real de uma função SECURITY DEFINER.
+create or replace function public.eh_colaborador()
+returns boolean language sql stable security definer
+set search_path = public, pg_temp as $$
+  select exists (
+    select 1 from public.colaboradores_autorizados c
+    where lower(c.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      and c.ativo
+  );
+$$;
+
+create or replace function public.eh_admin()
+returns boolean language sql stable security definer
+set search_path = public, pg_temp as $$
+  select exists (
+    select 1 from public.colaboradores_autorizados c
+    where lower(c.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      and c.ativo and c.papel = 'admin'
+  );
+$$;
+
+-- Guarda das views agregadas. Ver comentário na seção de GRANTS.
+create or replace function public.pode_ver_agregados()
+returns boolean language sql stable security definer
+set search_path = public, pg_temp as $$
+  select coalesce(auth.role(), '') = 'service_role'
+      or public.eh_colaborador();
+$$;
+
+revoke all on function public.eh_colaborador()      from public;
+revoke all on function public.eh_admin()            from public;
+revoke all on function public.pode_ver_agregados()  from public;
+grant execute on function public.eh_colaborador()     to authenticated;
+grant execute on function public.eh_admin()           to authenticated;
+grant execute on function public.pode_ver_agregados() to authenticated, service_role;
+
+-- =====================================================================
 --  VIEWS AGREGADAS
 -- ---------------------------------------------------------------------
 --  security_invoker = off (padrão): as views expõem SOMENTE números
@@ -485,6 +557,7 @@ select
   sum(c.refunded_amount)            as refunded_amount,
   sum(c.refund_count)::bigint       as refund_count
 from combinado c
+where public.pode_ver_agregados()
 group by 1, 2, 3, 4;
 
 comment on view public.v_monthly_revenue is
@@ -501,6 +574,7 @@ select
   coalesce(sum(s.clicks), 0)                               as clicks,
   coalesce(sum(s.conversions), 0)                          as conversions
 from public.ad_spend s
+where public.pode_ver_agregados()
 group by 1, 2, 3, 4;
 
 -- Consolidado anual: alimenta a barra de progresso e a projeção linear do Bloco 1.
@@ -530,6 +604,7 @@ select
   sum(c.net_revenue)            as net_revenue,
   sum(c.approved_count)::bigint as approved_count
 from combinado c
+where public.pode_ver_agregados()
 group by 1;
 
 -- =====================================================================
@@ -671,8 +746,16 @@ alter table public.webhook_events      enable row level security;
 alter table public.vault_credentials   enable row level security;
 alter table public.vault_access_log    enable row level security;
 alter table public.app_settings        enable row level security;
+alter table public.colaboradores_autorizados enable row level security;
+alter table public.cofre_master_tentativas   enable row level security;
 
--- Leitura pública (anon) — conteúdo do painel.
+-- Leitura liberada SOMENTE para colaborador autorizado e ativo.
+--
+-- O papel `anon` (a chave que vai dentro do JavaScript do navegador) não
+-- aparece em nenhuma policy: quem extrair essa chave do bundle e chamar a
+-- API REST do Supabase direto não lê linha nenhuma. Estar autenticado
+-- também não basta — qualquer um pode criar conta no Supabase; o que vale
+-- é constar em colaboradores_autorizados.
 do $$
 declare
   t text;
@@ -682,23 +765,49 @@ begin
     'document_categories', 'documents'
   ]
   loop
+    -- Remove a policy pública de versões anteriores deste arquivo.
     execute format('drop policy if exists "public_read_%1$s" on public.%1$s', t);
+    execute format('drop policy if exists "colaborador_le_%1$s" on public.%1$s', t);
     execute format(
-      'create policy "public_read_%1$s" on public.%1$s
-         for select to anon, authenticated using (true)', t);
+      'create policy "colaborador_le_%1$s" on public.%1$s
+         for select to authenticated using (public.eh_colaborador())', t);
   end loop;
 end $$;
 
--- Tabelas sensíveis: nenhuma policy = nenhum acesso para anon/authenticated.
--- A service_role ignora RLS por definição, e só é usada em código de servidor.
+-- Tabelas sensíveis: nenhuma policy = nenhum acesso, nem para colaborador
+-- logado. A service_role ignora RLS por definição, e só roda no servidor.
 
 -- =====================================================================
 --  GRANTS
 -- =====================================================================
 
-grant select on public.v_monthly_revenue  to anon, authenticated;
-grant select on public.v_monthly_ad_spend to anon, authenticated;
-grant select on public.v_annual_summary   to anon, authenticated;
+-- As views são SECURITY DEFINER (ignoram o RLS das tabelas de baixo), então
+-- quem decide o acesso a elas é o GRANT — e o GRANT sozinho liberaria
+-- qualquer conta autenticada. Por isso a checagem também está DENTRO da
+-- definição de cada view, via public.pode_ver_agregados().
+grant select on public.v_monthly_revenue  to authenticated;
+grant select on public.v_monthly_ad_spend to authenticated;
+grant select on public.v_annual_summary   to authenticated;
+
+-- Revoga o que versões anteriores deste arquivo concederam ao anônimo.
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'annual_goals', 'monthly_financials', 'marketing_actions',
+    'document_categories', 'documents', 'sales_transactions', 'ad_spend',
+    'manual_platform_revenue', 'platform_fees', 'webhook_events',
+    'vault_credentials', 'vault_access_log', 'app_settings', 'cofre_perfis',
+    'colaboradores_autorizados', 'cofre_master_tentativas'
+  ]
+  loop
+    execute format('revoke all on public.%I from anon', t);
+  end loop;
+end $$;
+
+revoke all on public.v_monthly_revenue  from anon;
+revoke all on public.v_monthly_ad_spend from anon;
+revoke all on public.v_annual_summary   from anon;
 
 -- =====================================================================
 --  REALTIME — atualiza a Home sem refresh quando um webhook chega

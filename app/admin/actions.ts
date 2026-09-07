@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import {
   annualGoalSchema,
   cofrePerfilSchema,
+  colaboradorSchema,
   documentCategorySchema,
   documentSchema,
   firstIssueMessage,
@@ -16,6 +17,7 @@ import {
   vaultCredentialSchema,
 } from '@/lib/admin/schemas'
 import type { ActionState } from '@/lib/admin/types'
+import { getColaborador } from '@/lib/auth'
 import { encryptSecret, isVaultEncryptionConfigured } from '@/lib/crypto'
 import { PLATFORM_LABELS } from '@/lib/calculations'
 import { syncMetaAdsSpend } from '@/lib/integrations/meta-ads'
@@ -54,6 +56,99 @@ function fail(message: string): ActionState {
 
 function done(message: string): ActionState {
   return { ok: true, message }
+}
+
+// ---------------------------------------------------------------------------
+//  ACESSO — quem pode entrar no Hub
+// ---------------------------------------------------------------------------
+
+/**
+ * Cadastra ou atualiza um colaborador autorizado.
+ *
+ * As Server Actions são endpoints HTTP de verdade: o layout do /admin
+ * barra a NAVEGAÇÃO, mas não a chamada direta desta função. Por isso a
+ * permissão é conferida aqui dentro também — e ainda mais nesta, que é a
+ * que decide quem entra no Hub.
+ */
+export async function saveColaborador(
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  const autor = await getColaborador()
+  if (autor?.papel !== 'admin') return fail('Apenas administradores podem alterar acessos.')
+
+  const parsed = colaboradorSchema.safeParse(formDataToObject(formData))
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error))
+
+  const supabase = getSupabaseAdminClient()
+  if (!supabase) return NO_DB
+
+  const { id, email, nome, papel, ativo } = parsed.data
+
+  // Rebaixar ou desativar a si mesmo tranca o último admin para fora do
+  // painel, sem caminho de volta pela interface.
+  const ehVoceMesmo = email === autor.email
+  if (ehVoceMesmo && (papel !== 'admin' || !ativo)) {
+    return fail('Você não pode remover o próprio acesso de administrador.')
+  }
+
+  const payload = { email, nome, papel, ativo }
+
+  const { error } = id
+    ? await supabase.from('colaboradores_autorizados').update(payload).eq('id', id)
+    : await supabase.from('colaboradores_autorizados').insert(payload)
+
+  if (error) {
+    if (error.code === '23505') return fail('Este e-mail já está cadastrado.')
+    return fail(`Erro ao salvar acesso: ${error.message}`)
+  }
+
+  revalidate('/admin/colaboradores')
+  return done(
+    id ? `Acesso de ${email} atualizado.` : `${email} agora pode entrar no Hub.`,
+  )
+}
+
+/** Remove alguém da lista. O acesso cai na consulta seguinte. */
+export async function deleteColaborador(
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  const autor = await getColaborador()
+  if (autor?.papel !== 'admin') return fail('Apenas administradores podem alterar acessos.')
+
+  const id = String(formData.get('id') ?? '')
+  if (!id) return fail('Registro não informado.')
+
+  const supabase = getSupabaseAdminClient()
+  if (!supabase) return NO_DB
+
+  const { data: alvo } = await supabase
+    .from('colaboradores_autorizados')
+    .select('email')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (alvo && String(alvo.email).toLowerCase() === autor.email) {
+    return fail('Você não pode remover o próprio acesso.')
+  }
+
+  // Sobrar zero admin deixaria a tela de acessos inalcançável para todos.
+  const { count } = await supabase
+    .from('colaboradores_autorizados')
+    .select('id', { count: 'exact', head: true })
+    .eq('papel', 'admin')
+    .eq('ativo', true)
+
+  if ((count ?? 0) <= 1) {
+    return fail('Este é o último administrador ativo. Promova outra pessoa antes de remover.')
+  }
+
+  const { error } = await supabase.from('colaboradores_autorizados').delete().eq('id', id)
+  if (error) return fail(`Erro ao remover acesso: ${error.message}`)
+
+  revalidate('/admin/colaboradores')
+  return done('Acesso removido.')
 }
 
 // ---------------------------------------------------------------------------

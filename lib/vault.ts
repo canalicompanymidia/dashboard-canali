@@ -159,7 +159,35 @@ export async function unlockVault(password: string): Promise<UnlockResult> {
     }
   }
 
+  // Bloqueio ANTES de conferir a senha: sem isso, uma sequência de
+  // tentativas continuaria custando um scrypt cada, e o limite existiria
+  // só no papel.
+  const supabase = getSupabaseAdminClient()
+
+  if (supabase) {
+    const { data } = await supabase.rpc('cofre_registrar_master', { p_sucesso: false })
+    const estado = Array.isArray(data) ? data[0] : data
+
+    if (estado?.bloqueado) {
+      await logAccess(false, 'master')
+      return {
+        ok: false,
+        message:
+          `Muitas tentativas erradas na Senha Mestre. ` +
+          `Tente de novo em ${estado.minutos_restantes} minuto(s).`,
+      }
+    }
+  }
+
   const valid = verifyMasterPassword(password, storedHash)
+
+  // A chamada acima já contou esta tentativa como falha. Acertando, esta
+  // segunda chamada zera o contador — ordem escolhida de propósito: se o
+  // processo morrer no meio, sobra uma falha a mais, nunca uma a menos.
+  if (valid && supabase) {
+    await supabase.rpc('cofre_registrar_master', { p_sucesso: true })
+  }
+
   await logAccess(valid, 'master')
 
   if (!valid) return { ok: false, message: 'Senha Mestre incorreta.' }
