@@ -119,6 +119,47 @@ export async function saveColaborador(
 }
 
 /**
+ * Traduz a falha de envio de e-mail em algo que o admin consiga agir.
+ *
+ * O Supabase devolve "Error sending invite email" para praticamente
+ * qualquer problema de SMTP — mensagem que não diz o que fazer. Estas
+ * são as causas reais, na ordem em que costumam acontecer.
+ */
+function explicarFalhaDeEnvio(
+  erro: { message: string; status?: number },
+  email: string,
+): string {
+  const msg = erro.message.toLowerCase()
+
+  if (erro.status === 429 || /rate.?limit|too many/.test(msg)) {
+    return (
+      'Limite de envio atingido. Espere alguns minutos, ou aumente o teto em ' +
+      'Authentication → Rate Limits no painel do Supabase.'
+    )
+  }
+
+  if (/not authorized|not allowed|unauthorized/.test(msg)) {
+    return (
+      `O Supabase recusou enviar para ${email}. Sem um SMTP próprio configurado, ele só ` +
+      'entrega e-mail para membros da sua organização no Supabase. Configure em ' +
+      'Authentication → SMTP Settings.'
+    )
+  }
+
+  if (/sending|smtp|mail|relay/.test(msg)) {
+    return (
+      'O servidor de e-mail recusou a mensagem. Confira, nesta ordem: ' +
+      '(1) SMTP configurado e ativo em Authentication → SMTP Settings; ' +
+      '(2) domínio verificado no provedor de e-mail; ' +
+      '(3) o remetente (From) pertence a esse domínio verificado. ' +
+      `O motivo exato aparece em Logs → Auth, no Supabase. [${erro.message}]`
+    )
+  }
+
+  return `Falha no envio: ${erro.message}. O erro completo aparece em Logs → Auth, no Supabase.`
+}
+
+/**
  * Dispara o e-mail para a pessoa criar (ou recriar) a senha dela.
  *
  * Um botão só para os dois casos: quem nunca entrou recebe um convite,
@@ -157,14 +198,14 @@ export async function enviarAcesso(
     erroConvite.status === 422 || /already|registered|exists/i.test(erroConvite.message)
 
   if (!jaExiste) {
-    return fail(`Não foi possível enviar: ${erroConvite.message}`)
+    return fail(explicarFalhaDeEnvio(erroConvite, email))
   }
 
   const { error: erroReset } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: destino,
   })
 
-  if (erroReset) return fail(`Não foi possível enviar o link: ${erroReset.message}`)
+  if (erroReset) return fail(explicarFalhaDeEnvio(erroReset, email))
 
   return done(`${email} já tinha conta — enviamos um link para criar uma nova senha.`)
 }
