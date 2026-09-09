@@ -3,6 +3,7 @@ import { AlertTriangle, ShieldCheck } from 'lucide-react'
 
 import { CanaliLogo } from '@/components/layout/canali-logo'
 import { LoginForm } from '@/components/auth/login-form'
+import { RecuperarSessao } from '@/components/auth/recuperar-sessao'
 import { getColaborador } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -16,9 +17,9 @@ const ERROS: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ destino?: string; erro?: string }>
+  searchParams: Promise<{ destino?: string; erro?: string; recuperar?: string }>
 }) {
-  const { destino, erro } = await searchParams
+  const { destino, erro, recuperar } = await searchParams
 
   // Já logado e autorizado: não faz sentido mostrar a tela de login.
   if (await getColaborador()) redirect(destino?.startsWith('/') ? destino : '/')
@@ -35,6 +36,10 @@ export default async function LoginPage({
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          {recuperar ? (
+            <RecuperarSessao destino={destino?.startsWith('/') ? destino : '/'} />
+          ) : null}
+
           {erro && ERROS[erro] ? (
             <p className="mb-3 flex items-start gap-1.5 rounded-lg bg-destructive/10 p-2.5 text-xs text-destructive">
               <AlertTriangle className="mt-px size-3.5 shrink-0" />
