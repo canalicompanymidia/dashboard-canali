@@ -141,14 +141,42 @@ export async function ingestTransaction(
 }
 
 /** Lê o corpo cru (necessário para validar assinatura HMAC) e faz o parse. */
+/**
+ * Teto do corpo de um webhook.
+ *
+ * Notificação de venda cabe em poucos kilobytes; 1 MB já é folga larga.
+ * O limite existe porque o endereço é público por natureza — ele precisa
+ * ser, para as plataformas alcançarem — e sem teto qualquer pessoa manda
+ * um corpo gigante que o servidor lê inteiro na memória antes mesmo de
+ * descobrir que a requisição não está autenticada.
+ */
+export const LIMITE_CORPO_WEBHOOK = 1_000_000
+
 export async function readJsonBody(
   request: Request,
-): Promise<{ raw: string; json: Record<string, unknown> | null }> {
+): Promise<{ raw: string; json: Record<string, unknown> | null; excedeu: boolean }> {
+  // Quando o cabeçalho existe, dá para recusar antes de ler qualquer byte.
+  const declarado = Number(request.headers.get('content-length') ?? '')
+  if (Number.isFinite(declarado) && declarado > LIMITE_CORPO_WEBHOOK) {
+    return { raw: '', json: null, excedeu: true }
+  }
+
   const raw = await request.text()
+
+  // Content-Length é informado pelo cliente e pode faltar ou mentir.
+  // A segunda conferência é sobre o que realmente chegou.
+  if (raw.length > LIMITE_CORPO_WEBHOOK) {
+    return { raw: '', json: null, excedeu: true }
+  }
+
   try {
     const parsed = JSON.parse(raw)
-    return { raw, json: parsed && typeof parsed === 'object' ? parsed : null }
+    return {
+      raw,
+      json: parsed && typeof parsed === 'object' ? parsed : null,
+      excedeu: false,
+    }
   } catch {
-    return { raw, json: null }
+    return { raw, json: null, excedeu: false }
   }
 }

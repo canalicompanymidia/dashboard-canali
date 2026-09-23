@@ -59,6 +59,25 @@ function done(message: string): ActionState {
   return { ok: true, message }
 }
 
+/**
+ * Barreira de autorização das Server Actions.
+ *
+ * O layout de /admin protege a NAVEGAÇÃO, não a operação. Server Action é
+ * um endpoint HTTP e o identificador dela viaja no bundle público — dá
+ * para lê-lo sem sessão e chamar a ação direto, sem passar por tela
+ * nenhuma. E como estas ações escrevem com a service_role, que ignora o
+ * RLS, o banco também não segura. A checagem precisa estar aqui dentro,
+ * em cada operação.
+ */
+async function exigirAdmin(): Promise<ActionState | null> {
+  const colaborador = await getColaborador()
+  if (!colaborador) return fail('Sua sessão expirou. Entre novamente.')
+  if (colaborador.papel !== 'admin') {
+    return fail('Apenas administradores podem executar esta ação.')
+  }
+  return null
+}
+
 /** Base da URL desta instalação — os links de e-mail precisam voltar para cá. */
 async function origemDaRequisicao(): Promise<string> {
   const h = await headers()
@@ -260,6 +279,9 @@ export async function saveAnnualGoal(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const parsed = annualGoalSchema.safeParse(formDataToObject(formData))
   if (!parsed.success) return fail(firstIssueMessage(parsed.error))
 
@@ -284,6 +306,9 @@ export async function deleteAnnualGoal(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const id = String(formData.get('id') ?? '')
   if (!id) return fail('Meta não identificada.')
 
@@ -301,6 +326,9 @@ export async function saveMonthlyFinancial(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const parsed = monthlyFinancialSchema.safeParse(formDataToObject(formData))
   if (!parsed.success) return fail(firstIssueMessage(parsed.error))
 
@@ -334,6 +362,9 @@ export async function saveManualPlatformRevenue(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const parsed = manualPlatformRevenueSchema.safeParse(formDataToObject(formData))
   if (!parsed.success) return fail(firstIssueMessage(parsed.error))
 
@@ -404,6 +435,9 @@ export async function saveMarketingAction(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const parsed = marketingActionSchema.safeParse(formDataToObject(formData))
   if (!parsed.success) return fail(firstIssueMessage(parsed.error))
 
@@ -443,6 +477,9 @@ export async function setActionStatus(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const id = String(formData.get('id') ?? '')
   const status = String(formData.get('status') ?? '')
 
@@ -464,6 +501,9 @@ export async function deleteMarketingAction(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const id = String(formData.get('id') ?? '')
   if (!id) return fail('Ação não identificada.')
 
@@ -485,6 +525,9 @@ export async function saveDocumentCategory(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const parsed = documentCategorySchema.safeParse(formDataToObject(formData))
   if (!parsed.success) return fail(firstIssueMessage(parsed.error))
 
@@ -508,6 +551,9 @@ export async function deleteDocumentCategory(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const id = String(formData.get('id') ?? '')
   if (!id) return fail('Categoria não identificada.')
 
@@ -526,6 +572,9 @@ export async function saveDocument(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const parsed = documentSchema.safeParse(formDataToObject(formData))
   if (!parsed.success) return fail(firstIssueMessage(parsed.error))
 
@@ -549,6 +598,9 @@ export async function deleteDocument(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const id = String(formData.get('id') ?? '')
   if (!id) return fail('Documento não identificado.')
 
@@ -570,6 +622,9 @@ export async function saveVaultCredential(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   // Escrever no cofre exige acesso Master: um colaborador com PIN pode ler
   // o que foi liberado para ele, mas nunca alterar credencial.
   if (!(await hasMasterSession())) {
@@ -611,6 +666,9 @@ export async function deleteVaultCredential(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   if (!(await hasMasterSession())) {
     return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
   }
@@ -632,6 +690,9 @@ export async function updateMasterPassword(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const parsed = masterPasswordSchema.safeParse(formDataToObject(formData))
   if (!parsed.success) return fail(firstIssueMessage(parsed.error))
 
@@ -644,6 +705,9 @@ export async function updateMasterPassword(
 // ---------------------------------------------------------------------------
 
 export async function runMetaAdsSync(): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   const result = await syncMetaAdsSpend()
   if (!result.ok) return fail(result.message)
 
@@ -659,6 +723,9 @@ export async function saveCofrePerfil(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   if (!(await hasMasterSession())) {
     return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
   }
@@ -679,6 +746,9 @@ export async function deleteCofrePerfil(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   if (!(await hasMasterSession())) {
     return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
   }
@@ -697,6 +767,9 @@ export async function unlockCofrePerfil(
   _prev: ActionState | null,
   formData: FormData,
 ): Promise<ActionState> {
+
+  const barreira = await exigirAdmin()
+  if (barreira) return barreira
   if (!(await hasMasterSession())) {
     return fail('Ação exclusiva do acesso Master. Valide a Senha Mestre novamente.')
   }

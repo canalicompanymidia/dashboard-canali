@@ -241,6 +241,21 @@ export const manualPlatformRevenueSchema = z.object({
   notes: optionalText,
 })
 
+/**
+ * Um link só entra se o destino for seguro.
+ *
+ * Estes valores viram `<a href>` na Home. O React 19 bloqueia `javascript:`
+ * por conta própria — conferi em navegador — mas apoiar a segurança do
+ * campo num detalhe interno do framework é frágil, e `data:` e `//outro-
+ * site` passam batido. Validar na entrada resolve para qualquer consumidor
+ * do dado, hoje e depois.
+ */
+function destinoSeguro(url: string): boolean {
+  // `//host` é protocolo-relativo: parece caminho interno e sai do site.
+  if (url.startsWith('//')) return false
+  return /^https?:\/\//i.test(url) || url.startsWith('/') || url.startsWith('#')
+}
+
 /** Lista de links no formato "Rótulo | https://url" — uma por linha. */
 export const linkListSchema = z.preprocess(
   (value) => (value === undefined || value === null ? '' : String(value)),
@@ -257,6 +272,14 @@ export const linkListSchema = z.preprocess(
       })
       .filter((item) => item.label && item.url)
   }),
+).pipe(
+  z
+    .array(z.object({ label: z.string(), url: z.string() }))
+    .refine((itens) => itens.every((item) => destinoSeguro(item.url)), {
+      message:
+        'Link inválido: a URL deve começar com http://, https://, / ou #. ' +
+        'Endereços como javascript:, data: ou //site não são aceitos.',
+    }),
 )
 
 export const marketingActionSchema = z.object({

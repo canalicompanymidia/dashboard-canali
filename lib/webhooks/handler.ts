@@ -16,7 +16,18 @@ export function createGenericWebhookHandler(platform: PlatformSource, displayNam
   const envPrefix = platform.toUpperCase()
 
   async function POST(request: Request) {
-    const { raw, json } = await readJsonBody(request)
+    const { raw, json, excedeu } = await readJsonBody(request)
+
+    // Corpo acima do teto: recusa sem ler, sem gravar log. Gravar aqui
+    // daria a quem nem tem credencial o poder de escrever no banco — que
+    // é justamente a amplificação que o limite existe para evitar.
+    if (excedeu) {
+      return NextResponse.json(
+        { ok: false, error: 'Corpo da requisição grande demais.' },
+        { status: 413 },
+      )
+    }
+
 
     const auth = verifyWebhookAuth(request, raw, {
       platform,
