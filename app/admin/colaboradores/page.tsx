@@ -43,7 +43,7 @@ export default async function AdminColaboradoresPage() {
                 Quem pode entrar no Hub
               </CardTitle>
               <CardDescription>
-                Só os e-mails desta lista abrem o Hub. Estar logado no Supabase não basta.
+                Só os e-mails desta lista abrem o Hub.
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -61,8 +61,8 @@ export default async function AdminColaboradoresPage() {
                 <strong className="text-foreground">Adicione o e-mail e clique em Enviar
                 convite.</strong> A pessoa recebe um link para criar a{' '}
                 <strong className="text-foreground">senha individual dela</strong> — mínimo de 8
-                caracteres, com maiúscula, minúscula, número e caractere especial. O link vale uma
-                hora e só funciona uma vez.
+                caracteres, com maiúscula, minúscula, número e caractere especial. O link vale 24
+                horas e só funciona uma vez.
               </p>
               <p>
                 <strong className="text-foreground">Desmarcar &quot;Ativo&quot; corta o acesso na
