@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react'
+import { ArrowUpRight, LogOut } from 'lucide-react'
 
 import { AnnualGoalsBlock } from '@/components/home/annual-goals-block'
 import { MarketingActionsBlock } from '@/components/home/marketing-actions-block'
@@ -88,6 +88,19 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
             {item.label}
           </a>
         ))}
+        {/* Sai do Hub: outro aplicativo, em subdomínio próprio, com login e
+            verificação em duas etapas dele. A seta avisa que este item
+            navega para fora, e não rola a página como os anteriores. */}
+        <a
+          href="https://automacoes.hubcanalicompany.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
+        >
+          Automações
+          <ArrowUpRight className="size-3.5" />
+        </a>
+
         <span className="rounded-md border border-border bg-card px-3 py-1.5 font-medium tabular">
           {year}
         </span>
