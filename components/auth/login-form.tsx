@@ -110,7 +110,7 @@ function FormularioRedefinicao({ onVoltar }: { onVoltar: () => void }) {
 
       <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
         <Mail className="mt-px size-3.5 shrink-0" />
-        O link vale uma hora e só funciona uma vez. Quem pedir a redefinição recebe um aviso na
+        O link vale 24 horas e só funciona uma vez. Quem pedir a redefinição recebe um aviso na
         própria caixa de entrada — se você não pediu, avise um administrador.
       </p>
 

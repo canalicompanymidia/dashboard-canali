@@ -307,13 +307,19 @@ número e um caractere especial**. A regra vive em `lib/senha.ts` e é aplicada
 duas vezes: no formulário (marcando os requisitos enquanto a pessoa digita) e
 no servidor, que é a barreira que vale.
 
+> **O prazo do link não está neste repositório.** Ele vem de
+> *Authentication → Providers → Email → Email OTP Expiration*, no painel do
+> Supabase, hoje em `86400` (24 h). Esse é o **teto** que o Supabase aceita —
+> acima disso a configuração é recusada. Se mudar lá, ajuste também o texto em
+> `components/auth/login-form.tsx`, que informa o prazo ao colaborador.
+
 > **Ligue a mesma política no Supabase**, em *Authentication → Policies*:
 > tamanho mínimo 8 e "Lowercase, uppercase, digits and symbols". A validação
 > deste repositório protege o formulário do Hub; a API de auth do Supabase
 > aceita chamada direta e precisa da própria regra.
 
 O time entra assim: um admin adiciona o e-mail em `/admin/colaboradores` e
-clica em **Enviar convite**. A pessoa recebe um link (uma hora, uso único),
+clica em **Enviar convite**. A pessoa recebe um link (24 horas, uso único),
 escolhe a senha e já entra. O mesmo botão reenvia para quem esqueceu.
 
 ### O que a senha resolve — e o que não resolve

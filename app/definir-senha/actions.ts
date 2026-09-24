@@ -15,7 +15,8 @@ export interface SenhaState {
  * Grava a senha escolhida.
  *
  * Só funciona com uma sessão válida — que vem do link de convite ou de
- * redefinição, ambos de uso único e com validade de uma hora. Sem sessão,
+ * redefinição, ambos de uso único e com validade de 24 horas (definida no
+ * painel do Supabase, em Authentication > Providers > Email). Sem sessão,
  * a atualização é recusada pelo próprio Supabase.
  */
 export async function definirSenha(
