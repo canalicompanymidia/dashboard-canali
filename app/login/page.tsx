@@ -29,7 +29,7 @@ export default async function LoginPage({
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <CanaliLogo className="h-12 w-auto text-foreground" />
-          <p className="rotulo mt-6">Hub de Marketing</p>
+          <p className="rotulo mt-6">Hub Canali Company</p>
           <h1 className="mt-2 font-serif text-[28px] leading-tight font-normal">Entrar</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Área interna. Cada pessoa tem o próprio login.

@@ -14,6 +14,7 @@ import {
 } from '@/lib/data'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { requireColaborador, type Colaborador } from '@/lib/auth'
+import { mensagemDoDia } from '@/lib/mensagens-do-dia'
 import { primeiroNome } from '@/lib/utils'
 import { isVaultConfigured } from '@/lib/vault'
 
@@ -64,14 +65,14 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
   return (
     <div className="flex flex-wrap items-end justify-between gap-4 pt-4 sm:pt-8">
       <div>
-        <p className="rotulo">Hub de Marketing · {year}</p>
+        <p className="rotulo">Hub Canali Company · {year}</p>
         {/* Saudação do Design System: sempre "Olá", sempre o primeiro nome. */}
         <h1 className="mt-2 font-serif text-4xl leading-[1.08] font-normal tracking-[-0.01em] sm:text-[44px]">
           {primeiroNome(colaborador.nome) ? `Olá, ${primeiroNome(colaborador.nome)}!` : 'Olá!'}
         </h1>
-        <p className="mt-2 max-w-xl text-[15px] text-muted-foreground">
-          Metas, faturamento do mês, ações no ar e os acessos do time, num lugar só.
-        </p>
+        {/* Uma frase por dia, a mesma para o time inteiro; a lista fica em
+            lib/mensagens-do-dia.ts e só se repete depois de 60 dias. */}
+        <p className="mt-2 max-w-xl text-[15px] text-muted-foreground">{mensagemDoDia()}</p>
       </div>
 
       <nav className="no-print flex flex-wrap gap-1.5 text-xs" aria-label="Navegação dos blocos">

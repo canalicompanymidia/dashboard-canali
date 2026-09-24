@@ -22,14 +22,14 @@ export async function SiteHeader() {
         <Link
           href={colaborador ? '/' : '/login'}
           className="group flex items-center gap-2.5 rounded-md text-white"
-          aria-label="Canali Co. — Hub de Marketing"
+          aria-label="Canali Co. — Hub Canali Company"
         >
           {/* Símbolo compacto: a versão cheia vira borrão nesta altura. O
               nome ao lado é General Sans, a mesma letra do logotipo. */}
           <CanaliLogo compact className="h-7 w-auto shrink-0 text-white" />
           <span className="text-[17px] leading-none font-medium tracking-[-0.01em]">Canali Co.</span>
           <span className="hidden border-l border-[#2c3a55] pl-3 text-[13px] leading-none font-medium text-[#a3a8b0] sm:inline">
-            Hub de Marketing
+            Hub Canali Company
           </span>
         </Link>
 

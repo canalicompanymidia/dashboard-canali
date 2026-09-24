@@ -24,7 +24,7 @@ const generalSans = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Hub de Marketing | Canali Company',
+    default: 'Hub Canali Company',
     template: '%s | Canali Company',
   },
   description:
