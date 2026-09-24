@@ -103,7 +103,7 @@ export function GoalForm({ goal, defaultYear }: GoalFormProps) {
                 id={`accent-${goal?.id ?? 'new'}`}
                 name="accent"
                 defaultValue={goal?.accent ?? 'emerald'}
-                className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+                className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
               >
                 {ACCENT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>

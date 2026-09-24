@@ -35,23 +35,21 @@ export function Stat({
   return (
     <div
       className={cn(
-        'rounded-xl border border-border bg-card p-4 shadow-xs transition-colors',
-        emphasis && 'ring-1 ring-positive/25',
+        'rounded-xl border border-border bg-card p-4 transition-colors',
+        emphasis && 'border-input',
         className,
       )}
     >
       <div className="flex items-center gap-1.5">
         {Icon ? <Icon className="size-3.5 text-muted-foreground" /> : null}
-        <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-          {label}
-        </p>
+        <p className="rotulo">{label}</p>
       </div>
 
       <p
         className={cn(
-          'mt-2 font-semibold tracking-tight tabular',
-          emphasis ? 'text-2xl sm:text-[26px]' : 'text-xl sm:text-[22px]',
-          TONE_CLASSES[tone],
+          'mt-2 font-serif font-normal tabular',
+          emphasis ? 'text-[28px] sm:text-[32px]' : 'text-2xl sm:text-[26px]',
+          tone === 'default' ? 'numero-destaque' : TONE_CLASSES[tone],
         )}
       >
         {value}

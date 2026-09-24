@@ -15,7 +15,7 @@ import { DIAS_SEMANA } from '@/lib/dias-semana'
 import type { ActionLink, MarketingAction } from '@/lib/types'
 
 const SELECT_CLASS =
-  'h-9 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25'
+  'h-9 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25'
 
 /** Converte a lista de links em texto editável, um por linha. */
 function linksToText(links: ActionLink[] | undefined): string {

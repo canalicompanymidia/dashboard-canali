@@ -126,3 +126,13 @@ export function slugify(input: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80)
 }
+
+/**
+ * "bruna dumbrovsky casaes" → "Bruna". Usado na saudação "Olá, Bruna!"
+ * do Design System — sempre o primeiro nome, nunca o e-mail.
+ */
+export function primeiroNome(nome: string | null | undefined): string {
+  const n = String(nome ?? '').trim().split(/\s+/)[0] ?? ''
+  if (!n) return ''
+  return n.charAt(0).toLocaleUpperCase('pt-BR') + n.slice(1).toLocaleLowerCase('pt-BR')
+}

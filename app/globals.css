@@ -4,87 +4,114 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ===================================================================
-   TOKENS — Tema Claro (padrão nativo do painel)
-   Paleta em oklch: transições e estados hover ficam perceptualmente
-   uniformes, sem os "saltos" de brilho típicos de HSL.
+   TOKENS — Canali Co. Design System
+   Preto, branco, azul-marinho e prata. O tema ESCURO é o padrão
+   (classe .dark no <html>); o claro existe para quem passa o dia em
+   tabelas. Todo par texto/fundo passa de 4.5:1 nos dois temas.
    =================================================================== */
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 
-  /* Superfícies */
-  --background: oklch(0.984 0.003 247);
-  --foreground: oklch(0.21 0.023 264);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.023 264);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.023 264);
+  /* Constantes da marca (iguais nos dois temas) */
+  --preto: #0a0b0d;
+  --branco: #ffffff;
+  --marinho-900: #0b1628;
+  --marinho-700: #14284d;
+  --marinho-500: #1f3864;
+  --prata-claro: #e6e8eb;
 
-  /* Marca */
-  --primary: oklch(0.26 0.031 263);
-  --primary-foreground: oklch(0.985 0.002 247);
+  /* Tema claro */
+  --background: #f5f5f3;
+  --foreground: #0a0b0d;
+  --card: #ffffff;
+  --card-foreground: #0a0b0d;
+  --popover: #ffffff;
+  --popover-foreground: #0a0b0d;
 
-  --secondary: oklch(0.967 0.004 247);
-  --secondary-foreground: oklch(0.26 0.031 263);
+  --primary: #14284d;
+  --primary-foreground: #ffffff;
 
-  --muted: oklch(0.967 0.004 247);
-  --muted-foreground: oklch(0.53 0.018 264);
+  --secondary: #e9edf4;
+  --secondary-foreground: #0a0b0d;
 
-  --accent: oklch(0.958 0.008 247);
-  --accent-foreground: oklch(0.26 0.031 263);
+  --muted: #eeeeec;
+  --muted-foreground: #575c64;
 
-  /* Semânticos de dado */
-  --positive: oklch(0.63 0.15 158);
-  --positive-foreground: oklch(0.98 0.01 158);
-  --negative: oklch(0.6 0.21 25);
-  --negative-foreground: oklch(0.98 0.01 25);
-  --warning: oklch(0.72 0.15 75);
-  --warning-foreground: oklch(0.26 0.05 75);
+  --accent: #e9edf4;
+  --accent-foreground: #0a0b0d;
 
-  --destructive: oklch(0.6 0.21 25);
-  --destructive-foreground: oklch(0.98 0.01 25);
+  --prata: #62676f;
+  --marinho-fundo: #e9edf4;
+
+  /* Semânticos — sempre acompanhados de palavra, nunca só a cor */
+  --positive: #1c7a55;
+  --positive-foreground: #ffffff;
+  --negative: #b3261e;
+  --negative-foreground: #ffffff;
+  --warning: #8a5a00;
+  --warning-foreground: #8a5a00;
+  --info: #1f3864;
+
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
 
   /* Traços */
-  --border: oklch(0.923 0.005 256);
-  --input: oklch(0.923 0.005 256);
-  --ring: oklch(0.63 0.15 158);
+  --border: #e2e3e5;
+  --input: #7d828a;
+  --ring: #1f3864;
 
-  /* Séries de gráfico */
-  --chart-1: oklch(0.63 0.15 158);
-  --chart-2: oklch(0.62 0.15 245);
-  --chart-3: oklch(0.6 0.17 300);
-  --chart-4: oklch(0.73 0.15 70);
-  --chart-5: oklch(0.64 0.19 15);
+  /* Séries de gráfico: marinho, prata e os semânticos */
+  --chart-1: #14284d;
+  --chart-2: #62676f;
+  --chart-3: #1c7a55;
+  --chart-4: #8a5a00;
+  --chart-5: #b3261e;
 }
 
 .dark {
-  --background: oklch(0.16 0.014 264);
-  --foreground: oklch(0.97 0.003 247);
-  --card: oklch(0.204 0.017 264);
-  --card-foreground: oklch(0.97 0.003 247);
-  --popover: oklch(0.204 0.017 264);
-  --popover-foreground: oklch(0.97 0.003 247);
+  --background: #0a0b0d;
+  --foreground: #f4f5f7;
+  --card: #121419;
+  --card-foreground: #f4f5f7;
+  --popover: #1a1d24;
+  --popover-foreground: #f4f5f7;
 
-  --primary: oklch(0.97 0.003 247);
-  --primary-foreground: oklch(0.21 0.023 264);
+  --primary: #d6d9de;
+  --primary-foreground: #0a0b0d;
 
-  --secondary: oklch(0.27 0.02 264);
-  --secondary-foreground: oklch(0.97 0.003 247);
+  --secondary: #1a1d24;
+  --secondary-foreground: #f4f5f7;
 
-  --muted: oklch(0.27 0.02 264);
-  --muted-foreground: oklch(0.71 0.014 264);
+  --muted: #1a1d24;
+  --muted-foreground: #a3a8b0;
 
-  --accent: oklch(0.28 0.022 264);
-  --accent-foreground: oklch(0.97 0.003 247);
+  --accent: #0e1c36;
+  --accent-foreground: #f4f5f7;
 
-  --positive: oklch(0.7 0.15 158);
-  --negative: oklch(0.66 0.2 25);
-  --warning: oklch(0.78 0.14 75);
-  --destructive: oklch(0.66 0.2 25);
+  --prata: #c9cdd3;
+  --marinho-fundo: #0e1c36;
 
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.7 0.15 158);
+  --positive: #6cc4a1;
+  --positive-foreground: #0a0b0d;
+  --negative: #f2786d;
+  --negative-foreground: #0a0b0d;
+  --warning: #e8b75c;
+  --warning-foreground: #e8b75c;
+  --info: #8fb1e8;
+
+  --destructive: #f2786d;
+  --destructive-foreground: #0a0b0d;
+
+  --border: #262a31;
+  --input: #6b717b;
+  --ring: #e6e8eb;
+
+  --chart-1: #c9cdd3;
+  --chart-2: #8fb1e8;
+  --chart-3: #6cc4a1;
+  --chart-4: #e8b75c;
+  --chart-5: #f2786d;
 }
 
 /* ===================================================================
@@ -122,14 +149,21 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-info: var(--info);
+  --color-prata: var(--prata);
+  --color-marinho-fundo: var(--marinho-fundo);
+  --color-marinho-900: var(--marinho-900);
+  --color-marinho-700: var(--marinho-700);
+  --color-marinho-500: var(--marinho-500);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* raio-sm 4px, raio-md 8px, raio-lg 14px */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: var(--radius);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
-    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: var(--font-general-sans), 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
   --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
 }
 
@@ -145,8 +179,12 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: 'cv11', 'ss01';
-    font-variation-settings: normal;
+  }
+
+  /* Foco sólido de 2px, visível em qualquer superfície. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 
   /* Números em tabelas e KPIs alinham em coluna. */
@@ -156,7 +194,8 @@
   }
 
   ::selection {
-    @apply bg-primary/15;
+    background: var(--marinho-500);
+    color: #ffffff;
   }
 
   /* Scrollbar discreta — o painel tem muitas áreas roláveis. */
@@ -179,19 +218,46 @@
 }
 
 @layer components {
-  /* Fundo do topo da página: gradiente sutil que dá profundidade sem ruído. */
+  /* Foco de luz azul-marinho no topo da página — a referência é o palco
+     da Rota do 0 aos 100K. Um único tom, sem gradiente colorido. */
   .hero-surface {
-    background-image:
-      radial-gradient(60rem 30rem at 15% -10%, oklch(0.63 0.15 158 / 0.09), transparent 60%),
-      radial-gradient(50rem 26rem at 85% -8%, oklch(0.6 0.17 300 / 0.08), transparent 62%);
+    background-image: radial-gradient(
+      60rem 28rem at 22% -12%,
+      var(--marinho-fundo),
+      transparent 70%
+    );
   }
 
   /* Grade fina de fundo — referência visual de "painel de dados". */
   .grid-surface {
     background-image:
-      linear-gradient(to right, oklch(0.21 0.023 264 / 0.035) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(0.21 0.023 264 / 0.035) 1px, transparent 1px);
+      linear-gradient(to right, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px);
     background-size: 2.5rem 2.5rem;
+  }
+
+  /* Sobretítulo em caixa alta bem espaçada (estilo "rotulo" do Design System). */
+  .rotulo {
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  /* Número grande de KPI: Georgia; no escuro ganha o brilho prateado. */
+  .numero-destaque {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-variant-numeric: lining-nums tabular-nums;
+    color: var(--prata);
+  }
+  .dark .numero-destaque {
+    background-image: linear-gradient(100deg, #9ea3ab 0%, #e6e8eb 45%, #9ea3ab 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   /* Brilho que percorre a barra de progresso enquanto a meta não fecha. */

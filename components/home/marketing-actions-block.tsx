@@ -91,8 +91,8 @@ function ActionCard({ action, onOpen }: { action: MarketingAction; onOpen: () =>
       type="button"
       onClick={onOpen}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-xl border bg-card text-left shadow-xs transition-all',
-        'hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none',
+        'group relative flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-all',
+        'hover:border-input focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none',
         accent.border,
         accent.ring,
         accent.glow,

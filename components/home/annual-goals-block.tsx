@@ -29,7 +29,7 @@ export function AnnualGoalsBlock({ goals, accumulatedRevenue, context }: AnnualG
       title="Metas Anuais e Projeção"
       icon={Target}
       actions={
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-xs">
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs">
           <CalendarRange className="size-3.5 text-muted-foreground" />
           <span className="tabular">
             Dia {context.daysElapsed} de {context.daysInYear}
@@ -40,12 +40,12 @@ export function AnnualGoalsBlock({ goals, accumulatedRevenue, context }: AnnualG
       }
     >
       {/* Faixa de contexto: o número acumulado vale para as duas metas. */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-card px-5 py-4 shadow-xs">
+      <div className="mb-4 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-card px-5 py-4">
         <div>
           <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
             Faturamento acumulado no ano
           </p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight tabular sm:text-3xl">
+          <p className="mt-1 numero-destaque text-3xl tabular sm:text-[36px]">
             {formatCurrency(accumulatedRevenue)}
           </p>
         </div>
@@ -102,7 +102,7 @@ function GoalPanel({ item }: { item: GoalProgress }) {
   return (
     <article
       className={cn(
-        'relative overflow-hidden rounded-xl border bg-card shadow-xs transition-shadow hover:shadow-md',
+        'relative overflow-hidden rounded-xl border bg-card transition-colors hover:border-input',
         accent.border,
       )}
     >
@@ -113,12 +113,12 @@ function GoalPanel({ item }: { item: GoalProgress }) {
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold tracking-widest uppercase">{goal.label}</h3>
+              <h3 className="rotulo text-foreground">{goal.label}</h3>
               <Badge variant={item.onTrack ? 'positive' : 'warning'}>
                 {item.onTrack ? 'No ritmo' : 'Abaixo do ritmo'}
               </Badge>
             </div>
-            <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular sm:text-[28px]">
+            <p className="mt-1.5 numero-destaque text-[28px] tabular sm:text-[32px]">
               {formatCurrency(goal.target_revenue)}
             </p>
             {goal.description ? (
@@ -130,7 +130,7 @@ function GoalPanel({ item }: { item: GoalProgress }) {
             <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
               Atingido
             </p>
-            <p className={cn('text-3xl font-bold tracking-tight tabular', accent.text)}>
+            <p className={cn('font-serif text-3xl font-normal tabular', accent.text)}>
               {formatPercent(item.progressPct)}
             </p>
           </div>

@@ -28,14 +28,15 @@ export default async function LoginPage({
     <div className="hero-surface flex min-h-dvh items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <CanaliLogo className="h-9 w-auto text-foreground" />
-          <h1 className="mt-4 text-lg font-semibold tracking-tight">Hub Canali Company</h1>
+          <CanaliLogo className="h-12 w-auto text-foreground" />
+          <p className="rotulo mt-6">Hub de Marketing</p>
+          <h1 className="mt-2 font-serif text-[28px] leading-tight font-normal">Entrar</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Área interna. Cada pessoa tem o próprio login.
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-6">
           {recuperar ? (
             <RecuperarSessao destino={destino?.startsWith('/') ? destino : '/'} />
           ) : null}

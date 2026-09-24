@@ -36,7 +36,7 @@ export function Section({
         <div className={cn('flex gap-3', description ? 'items-start' : 'items-center')}>
           <span
             className={cn(
-              'flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs',
+              'flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-card text-prata',
               description && 'mt-0.5',
             )}
           >
@@ -44,10 +44,8 @@ export function Section({
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold tracking-widest text-muted-foreground tabular">
-                {index}
-              </span>
-              <h2 className="text-lg leading-none font-semibold tracking-tight sm:text-xl">
+              <span className="rotulo tabular">{index}</span>
+              <h2 className="font-serif text-xl leading-none font-normal sm:text-2xl">
                 {title}
               </h2>
             </div>

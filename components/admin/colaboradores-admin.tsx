@@ -20,7 +20,7 @@ export interface ColaboradorRow {
 }
 
 const SELECT_CLASS =
-  'h-9 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40'
+  'h-9 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40'
 
 /** Cadastro de quem pode entrar. É a lista que o banco consulta no RLS. */
 export function ColaboradoresAdmin({

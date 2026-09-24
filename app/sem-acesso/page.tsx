@@ -15,12 +15,12 @@ export default async function SemAcessoPage({
 
   return (
     <div className="hero-surface flex min-h-dvh items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 text-center">
         <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-warning/15">
           <ShieldAlert className="size-5 text-warning-foreground dark:text-warning" />
         </span>
 
-        <h1 className="mt-4 text-lg font-semibold tracking-tight">
+        <h1 className="mt-4 font-serif text-2xl leading-tight font-normal">
           {ehAdmin ? 'Área restrita a administradores' : 'Acesso ainda não liberado'}
         </h1>
 

@@ -19,7 +19,7 @@ import { ICON_OPTIONS, PROVIDER_OPTIONS } from '@/lib/icons'
 import type { DocumentCategory, DocumentItem } from '@/lib/types'
 
 const SELECT_CLASS =
-  'h-9 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25'
+  'h-9 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25'
 
 /** Formulário de categoria do repositório. */
 export function CategoryEditor({ category }: { category?: DocumentCategory }) {

@@ -197,7 +197,7 @@ export default async function AdminOverviewPage() {
           <Link
             key={shortcut.href}
             href={shortcut.href}
-            className="group rounded-xl border border-border bg-card p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md"
+            className="group rounded-xl border border-border bg-card p-4 transition-all hover:border-input"
           >
             <span className="flex size-9 items-center justify-center rounded-lg bg-primary/8 text-primary">
               <shortcut.icon className="size-4.5" />

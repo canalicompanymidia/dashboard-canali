@@ -197,7 +197,7 @@ export function VaultPanel({ configured }: { configured: boolean }) {
   if (!conteudo) {
     return (
       <>
-        <div className="flex h-full flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-xs">
+        <div className="flex h-full flex-col justify-between rounded-xl border border-border bg-card p-5">
           <div>
             <div className="flex items-center gap-2.5">
               <span className="flex size-9 items-center justify-center rounded-lg bg-primary/8 text-primary">
@@ -461,7 +461,7 @@ export function VaultPanel({ configured }: { configured: boolean }) {
   const ehMaster = acesso.tipo === 'master'
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-positive/25 bg-card shadow-xs">
+    <div className="flex h-full flex-col rounded-xl border border-positive/25 bg-card">
       <header className="flex flex-wrap items-center gap-3 border-b border-border p-4">
         <span className="flex size-9 items-center justify-center rounded-lg bg-positive/12 text-positive">
           <LockOpen className="size-4.5" />

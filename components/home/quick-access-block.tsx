@@ -82,7 +82,7 @@ export function QuickAccessBlock({ categories, vaultConfigured }: QuickAccessBlo
             </p>
           </div>
         ) : (
-          <div className="rounded-xl border border-border bg-card shadow-xs">
+          <div className="rounded-xl border border-border bg-card">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <div className="overflow-x-auto border-b border-border p-3">
                 <TabsList>
@@ -159,7 +159,7 @@ function DocumentCard({ document, accent }: { document: DocumentItem; accent: st
         rel="noopener noreferrer"
         className={cn(
           'group flex h-full flex-col rounded-lg border border-border bg-background/60 p-3.5 transition-all',
-          'hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none',
+          'hover:border-input focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none',
           theme.ring,
         )}
       >

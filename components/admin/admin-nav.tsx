@@ -21,7 +21,7 @@ export function AdminNav() {
 
   return (
     <nav className="overflow-x-auto">
-      <ul className="inline-flex min-w-full gap-1 rounded-lg border border-border bg-card p-1 shadow-xs">
+      <ul className="inline-flex min-w-full gap-1 rounded-lg border border-border bg-card p-1">
         {LINKS.map((link) => {
           // '/admin' só fica ativo na rota exata; as demais aceitam subrotas.
           const isActive =
@@ -34,7 +34,7 @@ export function AdminNav() {
                 className={cn(
                   'flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-xs'
+                    ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                 )}
               >

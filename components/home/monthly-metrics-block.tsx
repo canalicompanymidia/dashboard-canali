@@ -198,7 +198,7 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
 
       {/* Detalhamento */}
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card p-4 shadow-xs lg:col-span-2">
+        <div className="rounded-xl border border-border bg-card p-4 lg:col-span-2">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
               Faturamento por plataforma
@@ -235,7 +235,7 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
                     </div>
                     <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-[width] duration-700"
+                        className="h-full rounded-full bg-prata transition-[width] duration-700"
                         style={{ width: `${Math.min(share, 100)}%` }}
                       />
                     </div>
@@ -247,7 +247,7 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
+          <div className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-center gap-1.5">
               <ShoppingCart className="size-3.5 text-muted-foreground" />
               <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
@@ -259,7 +259,7 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
             </p>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
+          <div className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-center gap-1.5">
               <ArrowDownRight className="size-3.5 text-muted-foreground" />
               <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">

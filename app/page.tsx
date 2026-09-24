@@ -13,6 +13,7 @@ import {
 } from '@/lib/data'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { requireColaborador, type Colaborador } from '@/lib/auth'
+import { primeiroNome } from '@/lib/utils'
 import { isVaultConfigured } from '@/lib/vault'
 
 // O painel mostra faturamento do dia: nada aqui pode ficar em cache.
@@ -60,11 +61,15 @@ export default async function HomePage() {
 
 function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborador }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-4 pt-4 sm:pt-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Hub Canali Company</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {colaborador.nome ? `Olá, ${colaborador.nome.split(' ')[0]}` : colaborador.email}
+        <p className="rotulo">Hub de Marketing · {year}</p>
+        {/* Saudação do Design System: sempre "Olá", sempre o primeiro nome. */}
+        <h1 className="mt-2 font-serif text-4xl leading-[1.08] font-normal tracking-[-0.01em] sm:text-[44px]">
+          {primeiroNome(colaborador.nome) ? `Olá, ${primeiroNome(colaborador.nome)}!` : 'Olá!'}
+        </h1>
+        <p className="mt-2 max-w-xl text-[15px] text-muted-foreground">
+          Metas, faturamento do mês, ações no ar e os acessos do time, num lugar só.
         </p>
       </div>
 
@@ -78,12 +83,12 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
           <a
             key={item.href}
             href={item.href}
-            className="rounded-full border border-border bg-card px-3 py-1.5 font-medium shadow-xs transition-colors hover:bg-accent"
+            className="rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
           >
             {item.label}
           </a>
         ))}
-        <span className="rounded-full border border-border bg-card px-3 py-1.5 font-medium shadow-xs tabular">
+        <span className="rounded-md border border-border bg-card px-3 py-1.5 font-medium tabular">
           {year}
         </span>
 
@@ -92,7 +97,7 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
         <form action="/auth/sair" method="post">
           <button
             type="submit"
-            className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 font-medium shadow-xs transition-colors hover:bg-accent"
+            className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
           >
             <LogOut className="size-3.5" />
             Sair

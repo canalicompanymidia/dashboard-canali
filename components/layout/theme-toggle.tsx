@@ -9,7 +9,7 @@ type Theme = 'light' | 'dark'
 
 /** Alterna entre claro e escuro e persiste a escolha em localStorage. */
 export function ThemeToggle() {
-  const [theme, setTheme] = React.useState<Theme>('light')
+  const [theme, setTheme] = React.useState<Theme>('dark')
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -32,12 +32,13 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon-sm"
+      className="text-[#e6e8eb] hover:bg-white/10 hover:text-white"
       onClick={toggle}
       aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
       title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
     >
-      {/* Antes de montar, renderiza o ícone do tema claro para não divergir do HTML do servidor. */}
-      {mounted && theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      {/* Antes de montar, renderiza o ícone do tema escuro (o padrão) para não divergir do HTML do servidor. */}
+      {!mounted || theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </Button>
   )
 }
