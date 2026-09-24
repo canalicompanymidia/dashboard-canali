@@ -18,11 +18,12 @@ credencial no WhatsApp e link no Drive.
 6. [Segurança e acesso](#segurança-e-acesso)
 7. [Cofre de senhas](#cofre-de-senhas)
 8. [Painel administrativo](#painel-administrativo)
-9. [Como as contas são feitas](#como-as-contas-são-feitas)
-10. [Estrutura do projeto](#estrutura-do-projeto)
-11. [Deploy](#deploy)
-12. [Práticas de código](#práticas-de-código)
-13. [Ajustes que podem ser necessários](#ajustes-que-podem-ser-necessários)
+9. [Tasks — gestão de demandas](#tasks--gestão-de-demandas)
+10. [Como as contas são feitas](#como-as-contas-são-feitas)
+11. [Estrutura do projeto](#estrutura-do-projeto)
+12. [Deploy](#deploy)
+13. [Práticas de código](#práticas-de-código)
+14. [Ajustes que podem ser necessários](#ajustes-que-podem-ser-necessários)
 
 ---
 
@@ -85,6 +86,7 @@ aplique só as migrations que faltam, em ordem, de `supabase/migrations/`:
 | `0004a_colaboradores_autorizados.sql` | Lista de quem pode entrar (**não quebra nada**) |
 | `0004b_fechar_acesso_anonimo.sql` | Fecha o acesso público (**só depois do login no ar**) |
 | `0005_bloqueio_da_senha_mestre.sql` | Bloqueio por tentativas na Senha Mestre |
+| `0006_tasks.sql` | Módulo Tasks: espaços, listas, tarefas, anexos (bucket privado) e a estrutura inicial |
 
 > **Ordem obrigatória da 0004.** Rode a `0004a`, publique o código com a tela
 > de login, entre no Hub e confirme que funciona — só então rode a `0004b`.
@@ -108,6 +110,7 @@ existente.
 | `webhook_events` | Log cru de todo webhook recebido |
 | `marketing_actions` | Cards do Bloco 3 |
 | `document_categories` / `documents` | Repositório do Bloco 4 |
+| `tarefas_*` (12 tabelas) | Módulo Tasks: espaços, pastas, listas, status, tarefas, responsáveis, campos, checklist, comentários, atividades, anexos |
 | `vault_credentials` | Credenciais cifradas |
 | `vault_access_log` | Auditoria de acesso ao cofre |
 | `app_settings` | Configurações (inclui o hash da Senha Mestre) |
@@ -489,6 +492,63 @@ HTTP e pode ser chamada sem passar por tela nenhuma.
 
 ---
 
+## Tasks — gestão de demandas
+
+`/tasks` — as demandas de todos os times, no formato do ClickUp:
+
+```
+Espaço  →  Pasta (opcional)  →  Lista  →  Tarefa  →  Subtarefa
+```
+
+| Tela | O que faz |
+| --- | --- |
+| `/tasks` | Início: Meu trabalho (Pendente / Feito / Delegado), Agenda, Atribuídas a mim, Recentes |
+| `/tasks/minhas` | Tudo que está com a pessoa, agrupado por status |
+| `/tasks/e/[id]` · `/tasks/p/[id]` | Visão geral do espaço e da pasta: listas com progresso e atrasadas |
+| `/tasks/l/[id]?view=lista\|quadro\|calendario` | A lista em três visualizações; o quadro aceita arrastar |
+| `/tasks/t/[id]` | Link direto para uma tarefa (abre o modal na lista dela) |
+| `/tasks/busca?q=` | Busca por título nos espaços que a pessoa vê |
+
+**A tarefa** tem status, responsáveis, início e vencimento, prioridade,
+estimativa, etiquetas, descrição, campos personalizados, subtarefas,
+checklist, anexos e um histórico com os comentários. Tudo se edita no
+próprio modal, campo a campo, sem botão de salvar. O modal vive na URL
+(`?t=<id>`): o link é compartilhável e o "voltar" do navegador fecha.
+
+**Status por lista.** Cada lista tem o próprio fluxo (Design tem oito
+etapas, Conteúdo tem quatro), editável em ⚙ na tela da lista. O *tipo* do
+status — não iniciado, em andamento, concluído, encerrado — é o que decide
+se a tarefa conta como pendente ou feita no Início. Uma lista nova herda o
+fluxo das listas vizinhas do espaço.
+
+**Campos personalizados** valem para um espaço inteiro ou só para uma
+lista. Tipos: texto, número, lista suspensa, etiquetas, data, pessoas,
+caixa de seleção e link. Os valores ficam em `tarefas.campos` (JSON).
+
+**Espaço privado**: só administradores e os membros escolhidos enxergam —
+é o caso do espaço "Gestão".
+
+**Permissões**: quem vê o espaço faz tudo nas tarefas dele. Excluir um
+espaço, ou mudar quem o vê: admin ou quem criou. Excluir pasta ou lista:
+admin, quem criou, ou dono do espaço. Comentário: só o autor edita; admin
+também apaga.
+
+**Segurança**: as tabelas `tarefas_*` têm RLS ligado e **nenhuma policy**.
+A chave pública não lê nada delas, nem logada. Toda leitura e escrita passa
+pelo servidor (service_role), e cada Server Action confere quem chama e se
+essa pessoa vê o espaço. Anexos ficam no bucket privado `tarefas-anexos`: o
+navegador envia o arquivo direto ao Storage por uma URL assinada de upload,
+gerada pelo servidor para aquela tarefa, e recebe URLs assinadas de uma
+hora para ver e baixar. Não há policy de storage.
+
+A migration `0006_tasks.sql` cria tudo e semeia a estrutura que o time já
+usa no ClickUp: os espaços Marketing, Comercial e Gestão (privado), as
+pastas e listas do Marketing com os status de cada uma, e os campos
+personalizados (Produto, Canais, Formato de Conteúdo...). Tudo pode ser
+renomeado ou apagado pela própria interface.
+
+---
+
 ## Como as contas são feitas
 
 ### Bloco 1 — Metas e projeção
@@ -575,6 +635,10 @@ app/
 │   ├── actions.ts              Server Actions (todas as escritas)
 │   ├── page.tsx                Status das integrações
 │   ├── metas|acoes|documentos|cofre|login/
+├── tasks/
+│   ├── actions.ts              Server Actions do Tasks (cada uma confere o colaborador)
+│   ├── layout.tsx              Barreira do módulo, barra lateral e modal da tarefa
+│   └── page|minhas|e|p|l|t|busca/
 └── api/
     ├── webhooks/{hotmart,onprofit,tmb}/
     ├── integrations/meta-ads/sync/
@@ -585,6 +649,7 @@ app/
 components/
 ├── home/                       Blocos 1-4, cofre, copy-to-clipboard
 ├── admin/                      Formulários e editores
+├── tasks/                      Barra lateral, visualizações, modal da tarefa, seletores
 ├── layout/                     Header, footer, tema
 └── ui/                         Primitivos shadcn/Radix
 
@@ -596,11 +661,13 @@ lib/
 ├── webhooks/                   Adaptadores e ingestão
 ├── integrations/meta-ads.ts    Marketing API
 ├── admin/                      Schemas Zod, auth opcional
+├── tasks/                      Tipos, leituras, permissões e schemas do Tasks
 └── supabase/                   Clientes browser/server/admin
 
 supabase/
 ├── schema.sql                  Estrutura completa
-└── seed.sql                    Dados iniciais
+├── seed.sql                    Dados iniciais
+└── migrations/                 0001 a 0006, idempotentes
 
 public/landing/
 ├── index.html                  Landing page da Canali Company (HTML + Tailwind CDN + JS puro)

@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/layout/site-header'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { ThemeScript } from '@/components/layout/theme-script'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { getBusinessDateParts } from '@/lib/calculations'
 
 import './globals.css'
 
@@ -42,6 +43,8 @@ export const viewport: Viewport = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const { year } = getBusinessDateParts()
+
   return (
     <html lang="pt-BR" className="dark" suppressHydrationWarning>
       <head>
@@ -52,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex min-h-dvh flex-col">
             <SiteHeader />
             <main className="flex-1">{children}</main>
-            <SiteFooter />
+            <SiteFooter year={year} />
           </div>
         </TooltipProvider>
       </body>

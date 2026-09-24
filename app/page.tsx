@@ -1,4 +1,5 @@
-import { ArrowUpRight, LogOut } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowUpRight, ListChecks, LogOut } from 'lucide-react'
 
 import { AnnualGoalsBlock } from '@/components/home/annual-goals-block'
 import { MarketingActionsBlock } from '@/components/home/marketing-actions-block'
@@ -74,6 +75,16 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
       </div>
 
       <nav className="no-print flex flex-wrap gap-1.5 text-xs" aria-label="Navegação dos blocos">
+        {/* Página própria do Hub (gestão de demandas dos times), não uma
+            âncora: vai antes dos blocos para não se misturar com o que
+            rola a página. */}
+        <Link
+          href="/tasks"
+          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
+        >
+          <ListChecks className="size-3.5" />
+          Tasks
+        </Link>
         {[
           { href: '#metas', label: 'Metas' },
           { href: '#metricas', label: 'Métricas' },

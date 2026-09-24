@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Settings2 } from 'lucide-react'
+import { ListChecks, Settings2 } from 'lucide-react'
 
 import { CanaliLogo } from '@/components/layout/canali-logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
@@ -44,6 +44,20 @@ export async function SiteHeader() {
           ) : null}
 
           {/* O botão "Painel" saiu: a marca à esquerda já leva para a Home. */}
+          {colaborador ? (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="border-[#3a4a68] bg-transparent text-[#e6e8eb] shadow-none hover:bg-marinho-700 hover:text-white"
+            >
+              <Link href="/tasks">
+                <ListChecks className="size-4" />
+                <span className="hidden sm:inline">Tasks</span>
+              </Link>
+            </Button>
+          ) : null}
+
           {colaborador?.papel === 'admin' ? (
             <Button
               variant="outline"

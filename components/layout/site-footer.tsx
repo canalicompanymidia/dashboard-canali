@@ -1,7 +1,13 @@
-import { getBusinessDateParts } from '@/lib/calculations'
+'use client'
 
-export function SiteFooter() {
-  const { year } = getBusinessDateParts()
+import { usePathname } from 'next/navigation'
+
+export function SiteFooter({ year }: { year: number }) {
+  const pathname = usePathname()
+
+  // O Tasks é um aplicativo de tela cheia com rolagem interna: um rodapé
+  // abaixo dele só empurraria a interface para fora da janela.
+  if (pathname.startsWith('/tasks')) return null
 
   return (
     <footer className="no-print border-t border-border/80 bg-card/40">
