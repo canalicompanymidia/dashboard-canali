@@ -87,6 +87,7 @@ aplique só as migrations que faltam, em ordem, de `supabase/migrations/`:
 | `0004b_fechar_acesso_anonimo.sql` | Fecha o acesso público (**só depois do login no ar**) |
 | `0005_bloqueio_da_senha_mestre.sql` | Bloqueio por tentativas na Senha Mestre |
 | `0006_tasks.sql` | Módulo Tasks: espaços, listas, tarefas, anexos (bucket privado) e a estrutura inicial |
+| `0007_clickup_ids.sql` | Ids de origem para importar do ClickUp sem duplicar |
 
 > **Ordem obrigatória da 0004.** Rode a `0004a`, publique o código com a tela
 > de login, entre no Hub e confirme que funciona — só então rode a `0004b`.
@@ -480,6 +481,7 @@ idempotente e não altera nenhuma credencial existente.
 | `/admin/acoes` | Criar, editar, **pausar** e excluir ações de marketing |
 | `/admin/documentos` | Categorias e links do repositório |
 | `/admin/cofre` | Credenciais e troca da Senha Mestre |
+| `/admin/clickup` | Importar espaços, listas e tarefas do ClickUp para o Tasks |
 
 Todas as escritas passam por Server Actions com validação Zod e revalidação
 automática da Home.
@@ -546,6 +548,33 @@ usa no ClickUp: os espaços Marketing, Comercial e Gestão (privado), as
 pastas e listas do Marketing com os status de cada uma, e os campos
 personalizados (Produto, Canais, Formato de Conteúdo...). Tudo pode ser
 renomeado ou apagado pela própria interface.
+
+### Importar do ClickUp
+
+`/admin/clickup` traz o conteúdo do ClickUp para o Tasks, com um token
+pessoal da API (ClickUp → avatar → Settings → Apps → API Token). O token
+é usado só durante a importação e não é gravado.
+
+O navegador comanda o passo a passo — uma página de 100 tarefas por
+chamada — para caber no tempo de uma função da Vercel e no limite do
+ClickUp (100 pedidos por minuto; um 429 vira espera automática). Vem:
+espaços, pastas, listas, status de cada lista, tarefas com descrição,
+responsáveis, datas, prioridade, estimativa, etiquetas, campos
+personalizados (opções casadas pelo nome), checklists e subtarefas; e,
+opcionalmente, comentários. Anexos não são trazidos.
+
+Regras:
+
+- **Corte por data**: só tarefas criadas a partir do dia escolhido
+  (padrão 01/01/2026). Pasta ou lista sem nenhuma tarefa nessa janela não
+  é criada no Hub.
+- **Idempotente**: cada registro guarda o `clickup_id` de origem
+  (migration `0007`). Rodar de novo atualiza título, status, datas,
+  responsáveis, checklist e campos; não duplica. O que foi criado no Hub
+  sem origem não é tocado.
+- Espaço, pasta, lista e campo são casados primeiro pelo id do ClickUp,
+  depois pelo nome; a estrutura semeada pela `0006` já vem amarrada aos
+  ids reais.
 
 ---
 
