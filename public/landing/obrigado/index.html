@@ -147,8 +147,8 @@
       background-position: center, top, top, top, bottom, top;
       background-repeat: no-repeat;
     }
-    .dark-tex::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55)); pointer-events: none; }
-    .dark-tex > .wrap { position: relative; z-index: 1; }
+    .dark-tex::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55)); pointer-events: none; }
+    .dark-tex > * { position: relative; z-index: 1; }
 
     /* ----------------------------------------------------------------
        FAIXA DE CTA (fundo escuro texturizado)
@@ -250,15 +250,15 @@
       display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px;
       background: #fff; color: var(--green-d); font-family: var(--font-display); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.72rem;
     }
-    .gift-grid { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: center; text-align: center; margin-top: 30px; }
-    .gift-photo { max-width: 340px; margin: 0 auto; width: 100%; }
+    .gift-grid { display: grid; grid-template-columns: 260px 1fr; gap: 32px; align-items: center; text-align: left; margin-top: 30px; }
+    .gift-photo { width: 100%; }
+    @media (max-width: 700px) {
+      .gift-grid { grid-template-columns: 1fr; text-align: center; gap: 24px; }
+      .gift-photo { max-width: 300px; margin: 0 auto; }
+    }
     .gift-photo { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,0.6); }
     .gift-photo img { width: 100%; height: auto; aspect-ratio: 4/5; object-fit: cover; }
-    .gift-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(15,22,19,0.9) 100%); }
     .gift-photo { box-shadow: 0 40px 80px -40px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.08); }
-    .gift-photo .cap { position: absolute; left: 20px; right: 20px; bottom: 18px; z-index: 1; color: #fff; }
-    .gift-photo .cap b { display: block; font-weight: 800; font-size: 1.15rem; }
-    .gift-photo .cap span { display: block; color: rgba(255,255,255,0.8); font-size: 0.85rem; }
     .gift h2 { font-size: clamp(1.8rem, 4.6vw, 3rem); font-weight: 800; }
     .gift .desc { margin-top: 18px; color: var(--ink-2); font-size: clamp(1.02rem, 2.3vw, 1.3rem); }
     .gift .desc strong { color: var(--ink); }
@@ -267,10 +267,6 @@
     .gift h2 .hl { color: #3ED67A; }
     .gift .desc { color: rgba(255,255,255,0.85); }
     .gift .desc strong { color: #fff; }
-    @media (max-width: 860px) {
-      .gift-grid { grid-template-columns: 1fr; text-align: center; gap: 28px; }
-      .gift-photo { max-width: 360px; margin: 0 auto; }
-    }
     .gift-band { margin-top: 44px; }
     .gift-card {
       max-width: 960px; margin: 0 auto; background: #fff; color: var(--ink); border-radius: var(--radius);
@@ -446,7 +442,6 @@
         <div class="gift-grid">
           <div class="gift-photo">
             <img src="assets/cassio-canali.jpg" alt="Cassio Canali sorrindo, segurando um carrinho de compras em miniatura" width="880" height="1100" />
-            <div class="cap"><b>Cassio Canali</b><span>Fundador da Canali Company · criador do Sistema DEP</span></div>
           </div>
           <div>
             <h2>Você ganhou uma <span class="hl">AULA SECRETA AO VIVO</span> com o Cassio Canali!</h2>
