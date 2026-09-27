@@ -711,8 +711,6 @@ A landing page é independente do painel: um único arquivo, sem build. Abra o
 `/landing/index.html` no domínio publicado.
 
 A página de obrigado segue a mesma ideia e fica em `/landing/obrigado/index.html`.
-Antes de publicar, troque o `href` do botão da aula secreta (marcado com
-`LINK-DO-GRUPO-WHATSAPP`) pelo link real do grupo.
 
 ---
 
