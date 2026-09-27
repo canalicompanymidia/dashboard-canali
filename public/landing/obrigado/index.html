@@ -11,53 +11,47 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <style>
     /* =================================================================
-       TOKENS — paleta puxada da página de vendas (etapa4v-sse):
-       fundo branco, verde dos passos, faixa amarela, botão verde com brilho.
+       TOKENS — continuidade com negociode4rendas.com.br/etapa4v-sse:
+       fundo branco, caixas verdes dos passos, faixa amarela, botão verde
+       retangular com brilho, tipografia Open Sans (≈ Segoe UI da referência).
        ================================================================= */
     :root {
-      --bg:        #FFFFFF;
-      --mint:      #EAF7F0;            /* faixas alternadas (referência obg-sistema) */
-      --mint-2:    #DDF3E6;
-      --ink:       #111111;
-      --ink-2:     #3A3A3A;
-      --ink-3:     #6B6B6B;
-      --line:      #DCE7E0;
+      --bg:         #FFFFFF;
+      --ink:        #1E1E1E;
+      --ink-2:      #333333;
+      --ink-3:      #6B6B6B;
+      --line:       #E5E5E5;
 
-      --green:     #00A650;            /* verde das pílulas PASSO X */
-      --green-d:   #00893F;
-      --green-btn: #3CB043;            /* botão QUERO PARCELAR */
-      --green-btn-2: #2E9C36;
-      --green-soft:#E3F6EB;
+      --green:      #00A650;      /* caixas PASSO X CONCLUÍDO! */
+      --green-d:    #008C43;
+      --green-btn:  #3CB043;      /* botão QUERO PARCELAR */
+      --green-btn-d:#2E9C36;
+      --green-soft: #E6F6EC;
 
-      --yellow:    #F2C46A;            /* faixa amarela da página de vendas */
-      --yellow-soft:#FFF5D6;
-      --amber:     #8A5A00;
+      --yellow:     #F2C46A;      /* faixa amarela */
+      --yellow-d:   #E0AE4C;
 
-      --red-bar:   #F86A6A;            /* barra do topo (será verde aqui) */
-      --gray-step: #9E9E9E;
+      --gray-step:  #9E9E9E;
+      --red-bar:    #F86A6A;      /* barra vermelha original (aqui vira verde) */
+      --alert:      #B42318;
 
-      --dark:      #0F1613;            /* seção do presente surpresa */
-      --dark-2:    #172019;
+      --radius:     14px;
+      --max:        1100px;
+      --col:        620px;        /* coluna central, largura do vídeo da referência */
 
-      --radius: 20px;
-      --radius-sm: 14px;
-      --max: 1000px;
-
-      --font-display: 'Montserrat', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-      --font-body:    'Inter', 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      --font: 'Open Sans', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0; background: var(--bg); color: var(--ink);
-      font-family: var(--font-body); line-height: 1.6;
-      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-      overflow-x: hidden;
+      font-family: var(--font); line-height: 1.55;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overflow-x: hidden;
     }
     a { color: inherit; }
     p { margin: 0; }
@@ -65,141 +59,157 @@
     :focus-visible { outline: 3px solid var(--green); outline-offset: 3px; border-radius: 6px; }
 
     .wrap { width: 100%; max-width: var(--max); margin: 0 auto; padding: 0 16px; }
-    .narrow { max-width: 820px; }
+    .col  { width: 100%; max-width: var(--col); margin: 0 auto; }
+    .center { text-align: center; }
 
-    h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.12; letter-spacing: -0.02em; text-wrap: balance; }
+    h1, h2, h3 { margin: 0; font-weight: 700; line-height: 1.2; text-wrap: balance; }
     .hl { color: var(--green); }
 
     /* ----------------------------------------------------------------
-       BARRA VERDE DO TOPO (no lugar da barra vermelha)
+       BARRA DO TOPO (a vermelha da referência, agora verde)
        ---------------------------------------------------------------- */
     .topbar {
-      background: var(--green);
-      color: #fff; text-align: center;
-      font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
-      font-size: clamp(1rem, 3vw, 1.6rem); letter-spacing: 0.01em;
-      padding: 22px 16px;
+      background: var(--green); color: #fff; text-align: center;
+      font-weight: 700; text-transform: uppercase;
+      font-size: clamp(1.25rem, 3.4vw, 2.4rem); line-height: 1.2; letter-spacing: 0.01em;
+      padding: 34px 16px;
     }
 
     /* ----------------------------------------------------------------
-       INDICADOR DE PASSOS (mesma linguagem das pílulas verdes)
+       PASSOS (caixas verdes retangulares, como na referência)
        ---------------------------------------------------------------- */
     .steps {
-      list-style: none; margin: 0; padding: 34px 0 6px;
-      display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px;
+      list-style: none; margin: 0; padding: 48px 0 0;
+      display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px;
     }
-    .steps li { display: flex; align-items: center; gap: 10px; }
-    .pill {
+    .steps li { display: flex; align-items: center; gap: 12px; }
+    .box {
       display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
-      min-width: 150px; padding: 12px 20px; border-radius: 12px;
-      background: var(--green); color: #fff;
-      font-family: var(--font-display); font-weight: 700; text-transform: uppercase;
-      font-size: 0.95rem; line-height: 1.3; text-align: center;
-      box-shadow: 0 6px 16px -8px rgba(0,166,80,0.6);
+      min-width: 190px; min-height: 90px; padding: 14px 22px; border-radius: var(--radius);
+      background: var(--green); color: #fff; text-align: center;
+      font-weight: 700; font-size: 1.25rem; line-height: 1.3; text-transform: uppercase;
     }
-    .pill small { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; opacity: 0.95; }
-    .pill.current {
-      background: linear-gradient(180deg, #14C062, var(--green));
-      font-size: 1.05rem; padding: 16px 26px;
-      box-shadow: 0 0 0 5px rgba(0,166,80,0.18), 0 16px 34px -14px rgba(0,166,80,0.9);
-      animation: pulse 2.4s ease-in-out infinite;
+    .box small { display: block; font-size: 1.25rem; font-weight: 700; }
+    .box.current {
+      background: var(--green);
+      box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--green), 0 14px 34px -12px rgba(0,166,80,0.8);
+      animation: pulse 2.2s ease-in-out infinite;
     }
     .chev { color: var(--green); display: inline-grid; place-items: center; }
-    .chev svg { width: 30px; height: 30px; }
+    .chev svg { width: 40px; height: 40px; }
     @keyframes pulse {
-      0%,100% { box-shadow: 0 0 0 5px rgba(0,166,80,0.18), 0 16px 34px -14px rgba(0,166,80,0.9); }
-      50%     { box-shadow: 0 0 0 10px rgba(0,166,80,0.08), 0 16px 34px -14px rgba(0,166,80,0.9); }
+      0%,100% { box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--green), 0 14px 34px -12px rgba(0,166,80,0.8); }
+      50%     { box-shadow: 0 0 0 4px #fff, 0 0 0 9px rgba(0,166,80,0.55), 0 14px 34px -12px rgba(0,166,80,0.8); }
     }
-    @media (max-width: 720px) {
-      .steps { gap: 8px; padding-top: 26px; }
-      .pill { min-width: 0; padding: 9px 12px; font-size: 0.72rem; border-radius: 10px; }
-      .pill small { font-size: 0.6rem; }
-      .pill.current { font-size: 0.85rem; padding: 12px 16px; width: 100%; }
-      .steps li.last { width: 100%; justify-content: center; margin-top: 4px; }
+    @media (max-width: 900px) {
+      .box { min-width: 140px; min-height: 70px; font-size: 0.95rem; padding: 10px 14px; }
+      .box small { font-size: 0.95rem; }
+      .chev svg { width: 28px; height: 28px; }
+    }
+    @media (max-width: 600px) {
+      .steps { gap: 8px; padding-top: 30px; }
+      .steps li { gap: 8px; }
+      .box { min-width: 0; min-height: 0; font-size: 0.72rem; padding: 8px 10px; border-radius: 10px; }
+      .box small { font-size: 0.72rem; }
+      .box.current { font-size: 0.9rem; padding: 12px 18px; }
+      .steps li.last { width: 100%; justify-content: center; margin-top: 6px; }
       .chev svg { width: 20px; height: 20px; }
     }
 
     /* ----------------------------------------------------------------
-       HERÓI (fundo menta, como a referência)
+       HERÓI
        ---------------------------------------------------------------- */
-    .hero { background: linear-gradient(180deg, #F3FBF6 0%, var(--mint) 100%); padding-bottom: 56px; text-align: center; }
-    .badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      margin-top: 34px; padding: 10px 22px; border-radius: 999px;
-      background: var(--green-soft); color: var(--green-d);
-      font-family: var(--font-display); font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.8rem;
-    }
-    h1 { font-size: clamp(2rem, 5.6vw, 3.6rem); font-weight: 900; margin-top: 22px; }
-    .lead { margin: 22px auto 0; max-width: 820px; color: var(--ink-2); font-size: clamp(1.02rem, 2.3vw, 1.3rem); }
-    .gift-line { margin-top: 22px; font-weight: 700; font-size: clamp(1rem, 2.2vw, 1.15rem); }
+    .hero { padding: 44px 0 56px; text-align: center; }
+    h1 { font-size: clamp(1.9rem, 4.8vw, 3rem); font-weight: 800; margin-top: 44px; }
+    .lead { margin: 20px auto 0; max-width: 860px; color: var(--ink-2); font-size: clamp(1.05rem, 2.3vw, 1.35rem); }
+    .gift-line { margin-top: 18px; font-weight: 700; font-size: clamp(1rem, 2.2vw, 1.2rem); }
     .warn {
-      margin: 40px auto 0; max-width: 1000px;
-      background: var(--yellow-soft); border: 1px solid #F2DDA5; border-radius: var(--radius);
-      padding: 26px 30px; color: var(--amber); font-size: clamp(0.98rem, 2vw, 1.12rem); font-weight: 500;
-      text-align: center;
+      margin: 34px auto 0; max-width: 960px;
+      background: #FFF7E0; border: 2px solid var(--yellow); border-radius: var(--radius);
+      padding: 22px 26px; color: var(--ink-2); font-size: clamp(0.98rem, 2vw, 1.12rem);
     }
-    .warn strong { color: #6B4500; }
+    .warn strong { color: var(--ink); }
+
+    /* ----------------------------------------------------------------
+       FAIXA AMARELA (bloco de CTA da referência)
+       ---------------------------------------------------------------- */
+    .band { background: var(--yellow); padding: 64px 0; text-align: center; }
+    .band .t { font-weight: 700; font-size: clamp(1.1rem, 2.4vw, 1.5rem); color: var(--ink); }
+    .band .s { margin-top: 10px; color: #4A3A12; font-size: clamp(0.95rem, 2vw, 1.1rem); }
+    .band .btn { margin-top: 28px; }
+
+    /* Botão verde retangular com brilho (QUERO PARCELAR) */
+    .btn {
+      position: relative; overflow: hidden;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 18px 40px; border-radius: 8px; text-decoration: none;
+      font-weight: 700; text-transform: uppercase; color: #fff;
+      font-size: clamp(1rem, 2.3vw, 1.3rem); letter-spacing: 0.01em; text-align: center; max-width: 100%;
+      background: linear-gradient(180deg, #4CC553 0%, var(--green-btn) 55%, var(--green-btn-d) 100%);
+      box-shadow: 0 0 22px rgba(60,176,67,0.75), 0 8px 22px -10px rgba(46,156,54,0.9);
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.04); box-shadow: 0 0 32px rgba(60,176,67,0.9), 0 14px 28px -10px rgba(46,156,54,0.95); }
+    .btn:active { transform: translateY(0); }
+    .btn.big { padding: 22px 48px; }
+    .btn::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.35) 50%, transparent 75%);
+      transform: translateX(-120%); transition: transform .75s ease;
+    }
+    .btn:hover::after { transform: translateX(120%); }
+    .btn-sub { margin-top: 12px; color: #4A3A12; font-size: 0.92rem; }
 
     /* ----------------------------------------------------------------
        BLOCOS NUMERADOS
        ---------------------------------------------------------------- */
-    .block { padding: 68px 0; }
-    .block.alt { background: var(--mint); }
+    .block { padding: 64px 0; }
     .block-head { text-align: center; }
     .num {
       display: inline-grid; place-items: center; vertical-align: middle;
-      width: 54px; height: 54px; border-radius: 50%; margin-right: 14px;
-      background: var(--green); color: #fff;
-      font-family: var(--font-display); font-weight: 800; font-size: 1.4rem;
-      box-shadow: 0 8px 18px -8px rgba(0,166,80,0.7);
+      width: 50px; height: 50px; border-radius: 12px; margin-right: 14px;
+      background: var(--green); color: #fff; font-weight: 800; font-size: 1.35rem;
     }
-    .block h2 { display: inline; font-size: clamp(1.7rem, 4.6vw, 3rem); font-weight: 800; vertical-align: middle; }
-    .block .sub { margin: 20px auto 0; max-width: 900px; color: var(--ink-2); font-size: clamp(1rem, 2.2vw, 1.25rem); text-align: center; }
-    @media (max-width: 600px) {
-      .num { width: 42px; height: 42px; font-size: 1.1rem; margin-right: 10px; }
-    }
+    .block h2 { display: inline; font-size: clamp(1.6rem, 4.2vw, 2.6rem); font-weight: 800; vertical-align: middle; }
+    .block .sub { margin: 18px auto 0; max-width: 860px; color: var(--ink-2); font-size: clamp(1rem, 2.2vw, 1.25rem); text-align: center; }
+    @media (max-width: 600px) { .num { width: 40px; height: 40px; font-size: 1.1rem; margin-right: 10px; border-radius: 10px; } }
 
-    /* Passo 1: credenciais + mock de login */
-    .access { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 34px; align-items: center; margin-top: 44px; }
+    /* Passo 1: credenciais + prévia do login */
+    .access { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 34px; align-items: center; margin-top: 40px; }
     @media (max-width: 860px) { .access { grid-template-columns: 1fr; } }
-    .access .intro { color: var(--ink-2); font-size: clamp(1rem, 2.2vw, 1.25rem); margin-bottom: 20px; }
-
+    .access .intro { color: var(--ink-2); font-size: clamp(1rem, 2.2vw, 1.2rem); margin-bottom: 18px; }
     .creds {
-      background: #fff; border-radius: var(--radius); padding: 28px 30px;
-      box-shadow: 0 24px 50px -30px rgba(0,80,40,0.35), 0 0 0 1px rgba(0,0,0,0.03);
-      display: grid; gap: 18px;
+      background: #fff; border: 2px solid var(--green); border-radius: var(--radius); padding: 26px 28px;
+      display: grid; gap: 16px;
     }
-    .cred { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: clamp(1rem, 2.1vw, 1.2rem); }
-    .cred .k { font-family: var(--font-display); font-weight: 700; }
+    .cred { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: clamp(1rem, 2.1vw, 1.15rem); }
+    .cred .k { font-weight: 700; }
     .cred a { color: var(--green-d); font-weight: 600; word-break: break-all; }
     .cred code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      background: var(--yellow-soft); border: 1px solid #F2DDA5; color: var(--ink);
-      padding: 6px 16px; border-radius: 12px; font-weight: 700; font-size: 1.05em;
+      background: #FFF7E0; border: 1px solid var(--yellow); color: var(--ink);
+      padding: 5px 14px; border-radius: 8px; font-weight: 700; font-size: 1.05em;
     }
     .copy {
       appearance: none; border: 1px solid var(--line); background: #fff; color: var(--ink-3);
-      font: inherit; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+      font: inherit; font-size: 0.78rem; font-weight: 600; padding: 5px 12px; border-radius: 6px; cursor: pointer;
       transition: background .2s, color .2s, border-color .2s;
     }
     .copy:hover { border-color: var(--green); color: var(--green-d); }
     .copy.ok { background: var(--green-soft); border-color: var(--green); color: var(--green-d); }
     .hint { color: var(--ink-3); font-size: 0.95rem; }
 
-    /* Prévia da tela de login da plataforma. Se existir assets/login-plataforma.png
-       (print real), ele aparece; senão, a réplica em CSS abaixo assume. */
-    .shot { border-radius: var(--radius); overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,0.7); background: #0A0A0A; }
+    .shot { border-radius: var(--radius); overflow: hidden; box-shadow: 0 24px 50px -28px rgba(0,0,0,0.6); background: #0A0A0A; }
     .shot img { width: 100%; height: auto; }
     .shot.has-img .mock { display: none; }
     .shot:not(.has-img) img { display: none; }
     .mock {
       background: radial-gradient(ellipse 80% 60% at 50% 30%, #161616 0%, #0A0A0A 70%);
       padding: 36px 28px 30px; color: #fff; text-align: center; user-select: none; pointer-events: none;
-      font-family: var(--font-body);
     }
     .mock .logo { display: flex; align-items: center; justify-content: center; gap: 10px; color: #fff; }
     .mock .logo svg { height: 34px; width: auto; }
-    .mock .logo span { font-family: var(--font-display); font-weight: 600; font-size: 1.6rem; letter-spacing: -0.02em; }
+    .mock .logo span { font-weight: 600; font-size: 1.6rem; letter-spacing: -0.02em; }
     .mock .t { margin-top: 30px; font-weight: 700; font-size: 1.1rem; }
     .mock .f { margin-top: 20px; text-align: left; display: grid; gap: 14px; }
     .mock .in {
@@ -212,128 +222,117 @@
     .mock .new { margin-top: 18px; font-size: 0.95rem; color: rgba(255,255,255,0.75); }
     .mock .new b { color: #6FA3E8; font-weight: 500; }
 
-    /* Botões (pílula verde com brilho, como QUERO PARCELAR) */
-    .btn {
-      position: relative; overflow: hidden;
-      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-      padding: 22px 44px; border-radius: 999px; text-decoration: none;
-      font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
-      font-size: clamp(1rem, 2.4vw, 1.3rem); letter-spacing: 0.01em; color: #fff;
-      background: linear-gradient(180deg, #4CC553 0%, var(--green-btn) 55%, var(--green-btn-2) 100%);
-      box-shadow: 0 0 26px rgba(60,176,67,0.55), 0 14px 30px -14px rgba(46,156,54,0.9);
-      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
-      text-align: center; max-width: 100%;
-    }
-    .btn:hover { transform: translateY(-2px); filter: brightness(1.04); box-shadow: 0 0 34px rgba(60,176,67,0.7), 0 18px 36px -14px rgba(46,156,54,0.95); }
-    .btn:active { transform: translateY(0); }
-    .btn::after {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.35) 50%, transparent 75%);
-      transform: translateX(-120%); transition: transform .75s ease;
-    }
-    .btn:hover::after { transform: translateX(120%); }
-    .btn.block-btn { display: flex; width: 100%; }
-    .center { text-align: center; }
-    .cta-wrap { margin-top: 40px; }
-    .btn-sub { margin-top: 14px; color: var(--ink-3); font-size: 0.92rem; }
-
     /* ----------------------------------------------------------------
-       PRESENTE SURPRESA (fundo escuro, como a referência)
+       PRESENTE SURPRESA (fundo branco + card na faixa amarela)
        ---------------------------------------------------------------- */
-    .gift { background: radial-gradient(ellipse 70% 50% at 50% 0%, #1C3A2A 0%, var(--dark) 70%); color: #fff; padding: 80px 0; text-align: center; }
-    .gift .tag {
-      display: inline-flex; align-items: center; gap: 8px; padding: 12px 26px; border-radius: 999px;
-      background: var(--yellow); color: #4A2E00;
-      font-family: var(--font-display); font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.85rem;
-      box-shadow: 0 10px 30px -14px rgba(242,196,106,0.9);
+    /* Fundo escuro com feixes esverdeados (referência enviada). Se existir
+       assets/fundo-aula.jpg, a imagem entra por cima dos gradientes. */
+    .gift {
+      position: relative; padding: 72px 0 0; text-align: center; color: #fff;
+      background-color: #0B0F12;
+      background-image:
+        url('assets/fundo-aula.jpg'),
+        linear-gradient(180deg, rgba(20,60,55,0.55) 0%, rgba(20,60,55,0.12) 40%, transparent 70%),
+        linear-gradient(90deg, transparent 22%, rgba(60,140,120,0.22) 28%, rgba(60,140,120,0.10) 34%, transparent 42%),
+        linear-gradient(90deg, transparent 78%, rgba(60,140,120,0.32) 85%, rgba(60,140,120,0.14) 92%, transparent 100%),
+        radial-gradient(ellipse 90% 60% at 50% 100%, #050708 0%, transparent 70%),
+        linear-gradient(180deg, #0F171A 0%, #0B0F12 60%, #070A0C 100%);
+      background-size: cover, 100% 100%, 100% 70%, 100% 80%, 100% 100%, 100% 100%;
+      background-position: center, top, top, top, bottom, top;
+      background-repeat: no-repeat;
     }
-    .gift h2 { margin-top: 28px; font-size: clamp(1.9rem, 5.2vw, 3.4rem); font-weight: 900; color: #fff; }
-    .gift h2 .hl { color: #3ED67A; }
-    .gift .desc { margin: 24px auto 0; max-width: 900px; color: rgba(255,255,255,0.85); font-size: clamp(1.02rem, 2.3vw, 1.25rem); }
-    .gift .desc strong { color: #fff; }
-    .gift-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 40px; align-items: center; text-align: left; margin-top: 10px; }
-    .gift-photo { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: 0 40px 80px -40px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06); }
+    .gift::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55)); pointer-events: none; }
+    .gift > .wrap { position: relative; z-index: 1; }
+    .gift-band { position: relative; z-index: 1; }
+
+    .gift .tag {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 26px; border-radius: 8px;
+      background: var(--yellow); color: var(--ink); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.9rem;
+    }
+    .gift-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 40px; align-items: center; text-align: left; margin-top: 30px; }
+    .gift-photo { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,0.6); }
     .gift-photo img { width: 100%; height: auto; aspect-ratio: 4/5; object-fit: cover; }
-    .gift-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(15,22,19,0.85) 100%); }
-    .gift-photo .cap { position: absolute; left: 20px; right: 20px; bottom: 18px; z-index: 1; }
-    .gift-photo .cap b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
-    .gift-photo .cap span { display: block; color: rgba(255,255,255,0.75); font-size: 0.85rem; }
-    .gift-grid .tag { }
-    .gift-grid h2 { text-align: left; }
-    .gift-grid .desc { margin-left: 0; text-align: left; }
+    .gift-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(15,22,19,0.9) 100%); }
+    .gift-photo { box-shadow: 0 40px 80px -40px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.08); }
+    .gift-photo .cap { position: absolute; left: 20px; right: 20px; bottom: 18px; z-index: 1; color: #fff; }
+    .gift-photo .cap b { display: block; font-weight: 800; font-size: 1.15rem; }
+    .gift-photo .cap span { display: block; color: rgba(255,255,255,0.8); font-size: 0.85rem; }
+    .gift h2 { font-size: clamp(1.8rem, 4.6vw, 3rem); font-weight: 800; }
+    .gift .desc { margin-top: 18px; color: var(--ink-2); font-size: clamp(1.02rem, 2.3vw, 1.3rem); }
+    .gift .desc strong { color: var(--ink); }
+    /* tema escuro da seção do convite */
+    .gift h2 { color: #fff; }
+    .gift h2 .hl { color: #3ED67A; }
+    .gift .desc { color: rgba(255,255,255,0.85); }
+    .gift .desc strong { color: #fff; }
     @media (max-width: 860px) {
       .gift-grid { grid-template-columns: 1fr; text-align: center; gap: 28px; }
-      .gift-grid h2, .gift-grid .desc { text-align: center; }
       .gift-photo { max-width: 360px; margin: 0 auto; }
     }
+    .gift-band { margin-top: 56px; background: var(--yellow); padding: 56px 0 64px; }
     .gift-card {
-      margin: 40px auto 0; max-width: 1000px; background: #fff; color: var(--ink);
-      border-radius: var(--radius); padding: clamp(24px, 4vw, 44px) clamp(20px, 4vw, 44px);
-      box-shadow: 0 40px 80px -40px rgba(0,0,0,0.8);
-      text-align: left;
+      max-width: 960px; margin: 0 auto; background: #fff; color: var(--ink); border-radius: var(--radius);
+      padding: clamp(24px, 4vw, 40px); text-align: left; box-shadow: 0 30px 60px -40px rgba(0,0,0,0.5);
     }
-    .gift-card .attn { text-align: center; font-family: var(--font-display); font-weight: 800; font-size: clamp(1rem, 2.4vw, 1.2rem); color: #B42318; margin-bottom: 26px; }
-    .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
-    .checks li { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: start; font-size: clamp(1rem, 2.2vw, 1.2rem); color: var(--ink-2); }
-    .checks li .ic { font-size: 1.2em; line-height: 1.4; }
+    .gift-card .attn { text-align: center; font-weight: 800; font-size: clamp(1rem, 2.4vw, 1.2rem); color: var(--alert); margin-bottom: 24px; }
+    .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+    .checks li { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: start; font-size: clamp(1rem, 2.2vw, 1.15rem); color: var(--ink-2); }
+    .checks li .ic { font-size: 1.15em; line-height: 1.4; }
     .checks li strong { color: var(--ink); }
-    .gift-card .link-warn { margin-top: 30px; text-align: center; font-family: var(--font-display); font-weight: 800; font-size: clamp(1.05rem, 2.4vw, 1.3rem); }
-    .gift-card .link-sub { margin-top: 12px; text-align: center; color: var(--ink-2); font-size: clamp(1rem, 2vw, 1.15rem); }
-    .gift-card .cta-wrap { margin-top: 30px; }
+    .gift-card .link-warn { margin-top: 28px; text-align: center; font-weight: 800; font-size: clamp(1.05rem, 2.4vw, 1.3rem); }
+    .gift-card .link-sub { margin-top: 10px; text-align: center; color: var(--ink-2); font-size: clamp(1rem, 2vw, 1.12rem); }
+    .gift-card .cta-wrap { margin-top: 28px; text-align: center; }
+    .gift-card .cta-wrap .btn { display: flex; width: 100%; }
+    .gift-card .btn-sub { color: var(--ink-3); }
 
     /* ----------------------------------------------------------------
-       FAQ — Dúvidas rápidas (cards brancos com "+")
+       FAQ — Dúvidas rápidas
        ---------------------------------------------------------------- */
-    .faq-sec { padding: 72px 0 90px; }
-    .faq-sec h2 { text-align: center; font-size: clamp(1.9rem, 5vw, 3rem); font-weight: 800; }
-    .faq { margin-top: 40px; display: grid; gap: 14px; }
-    .faq details {
-      background: #fff; border: 1.5px solid #1F2A24; border-radius: 16px;
-      box-shadow: 0 6px 18px -14px rgba(0,0,0,0.35);
-      transition: border-color .2s, box-shadow .2s;
-    }
-    .faq details[open] { border-color: var(--green); box-shadow: 0 14px 30px -20px rgba(0,166,80,0.45); }
+    .faq-sec { padding: 64px 0 80px; }
+    .faq-sec h2 { text-align: center; font-size: clamp(1.7rem, 4.4vw, 2.6rem); font-weight: 800; }
+    .faq { margin-top: 34px; display: grid; gap: 12px; max-width: 900px; margin-left: auto; margin-right: auto; }
+    .faq details { background: #fff; border: 2px solid var(--line); border-radius: var(--radius); transition: border-color .2s; }
+    .faq details[open] { border-color: var(--green); }
     .faq summary {
       list-style: none; cursor: pointer;
       display: flex; align-items: center; justify-content: space-between; gap: 16px;
-      padding: 24px 28px; font-family: var(--font-display); font-weight: 700; font-size: clamp(1.02rem, 2.3vw, 1.3rem);
+      padding: 20px 24px; font-weight: 700; font-size: clamp(1rem, 2.2vw, 1.2rem);
     }
     .faq summary::-webkit-details-marker { display: none; }
     .faq summary .plus {
-      flex: 0 0 auto; width: 40px; height: 40px; border-radius: 8px;
-      display: grid; place-items: center; background: var(--green-soft); color: var(--green-d);
-      transition: transform .25s ease, background .2s, color .2s;
+      flex: 0 0 auto; width: 38px; height: 38px; border-radius: 8px;
+      display: grid; place-items: center; background: var(--green); color: #fff;
+      transition: transform .25s ease;
     }
     .faq summary .plus svg { width: 20px; height: 20px; }
-    .faq details[open] summary .plus { transform: rotate(45deg); background: var(--green); color: #fff; }
-    .faq .ans { padding: 0 28px 26px; color: var(--ink-2); font-size: clamp(0.98rem, 2vw, 1.1rem); }
+    .faq details[open] summary .plus { transform: rotate(45deg); }
+    .faq .ans { padding: 0 24px 22px; color: var(--ink-2); font-size: clamp(0.98rem, 2vw, 1.08rem); }
     .faq .ans a { color: var(--green-d); font-weight: 600; }
     .faq .ans code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      background: var(--yellow-soft); border: 1px solid #F2DDA5; padding: 2px 8px; border-radius: 6px; font-weight: 700;
+      background: #FFF7E0; border: 1px solid var(--yellow); padding: 2px 8px; border-radius: 6px; font-weight: 700;
     }
     @media (max-width: 600px) {
-      .faq summary { padding: 18px 18px; }
-      .faq .ans { padding: 0 18px 20px; }
-      .faq summary .plus { width: 34px; height: 34px; }
+      .faq summary { padding: 16px 16px; }
+      .faq .ans { padding: 0 16px 18px; }
+      .faq summary .plus { width: 32px; height: 32px; }
     }
 
     /* ----------------------------------------------------------------
        RODAPÉ
        ---------------------------------------------------------------- */
-    footer { background: var(--mint); padding: 34px 0 44px; text-align: center; color: var(--ink-3); font-size: 0.9rem; }
-    footer .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; margin-bottom: 12px; }
+    footer { background: var(--ink); color: rgba(255,255,255,0.7); padding: 34px 0 44px; text-align: center; font-size: 0.9rem; }
+    footer .brand { display: inline-flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; margin-bottom: 12px; }
     footer .brand svg { height: 26px; width: auto; }
-    footer .brand span { font-family: var(--font-display); font-weight: 700; }
+    footer .brand span { font-weight: 700; }
     footer p + p { margin-top: 6px; }
 
-    /* Revelação no scroll */
     .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
     .reveal.is-visible { opacity: 1; transform: none; }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       .reveal { opacity: 1; transform: none; transition: none; }
-      .pill.current { animation: none; }
+      .box.current { animation: none; }
       .btn::after { display: none; }
       *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
     }
@@ -358,15 +357,13 @@
 
       <!-- Indicador de avanço: passos concluídos + inscrição confirmada em destaque -->
       <ol class="steps" aria-label="Progresso da sua inscrição">
-        <li><span class="pill">Passo 1 <small>Concluído!</small></span></li>
-        <li><span class="pill">Passo 2 <small>Concluído!</small></span></li>
-        <li><span class="pill">Passo 3 <small>Concluído!</small></span>
+        <li><span class="box">Passo 1 <small>Concluído!</small></span></li>
+        <li><span class="box">Passo 2 <small>Concluído!</small></span></li>
+        <li><span class="box">Passo 3 <small>Concluído!</small></span>
           <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg></span>
         </li>
-        <li class="last"><span class="pill current" aria-current="step">✅ Inscrição confirmada</span></li>
+        <li class="last"><span class="box current" aria-current="step">✅ Inscrição <small>confirmada</small></span></li>
       </ol>
-
-      <div class="badge">✅ Acesso liberado</div>
       <h1>Sua inscrição foi aprovada e seu acesso <span class="hl">já está liberado.</span></h1>
       <p class="lead">Em menos de 2 minutos você entra na plataforma e começa a aplicar o <strong>Sistema DEP</strong>.</p>
       <p class="gift-line">🎁 E tem um presente surpresa te esperando nessa página... continua rolando para baixo.</p>
@@ -432,46 +429,56 @@
         </div>
       </div>
 
-      <div class="center cta-wrap reveal">
-        <a class="btn" href="https://canalico.curseduca.pro/login" target="_blank" rel="noopener">Acessar o Sistema DEP agora →</a>
-      </div>
     </div>
   </section>
+
+  <div class="band">
+    <div class="wrap">
+      <p class="t">Seu acesso ao Sistema DEP já está liberado. Entre agora com os dados acima:</p>
+      <a class="btn big" href="https://canalico.curseduca.pro/login" target="_blank" rel="noopener">Acessar o Sistema DEP agora</a>
+    </div>
+  </div>
 
   <!-- ============================== PRESENTE SURPRESA ============================== -->
   <section class="gift" id="presente">
     <div class="wrap">
-      <div class="gift-grid reveal">
-        <div class="gift-photo">
-          <img src="assets/cassio-canali.jpg" alt="Cassio Canali sorrindo, segurando um carrinho de compras em miniatura" width="880" height="1100" loading="lazy" />
-          <div class="cap"><b>Cassio Canali</b><span>Fundador da Canali Company · criador do Sistema DEP</span></div>
-        </div>
-        <div>
-          <span class="tag">🎁 Presente surpresa liberado</span>
-          <h2>Você ganhou uma <span class="hl">AULA SECRETA AO VIVO</span> com o Cassio Canali!</h2>
-          <p class="desc">
-            A rota estratégica para sair do nível iniciante e alcançar <strong>até R$100 mil por mês</strong> vendendo na internet,
-            através do seu negócio digital sem estoque.
-          </p>
+      <div class="reveal">
+        <span class="tag">🎁 Presente surpresa liberado</span>
+        <div class="gift-grid">
+          <div class="gift-photo">
+            <img src="assets/cassio-canali.jpg" alt="Cassio Canali sorrindo, segurando um carrinho de compras em miniatura" width="880" height="1100" loading="lazy" />
+            <div class="cap"><b>Cassio Canali</b><span>Fundador da Canali Company · criador do Sistema DEP</span></div>
+          </div>
+          <div>
+            <h2>Você ganhou uma <span class="hl">AULA SECRETA AO VIVO</span> com o Cassio Canali!</h2>
+            <p class="desc">
+              A rota estratégica para sair do nível iniciante e alcançar <strong>até R$100 mil por mês</strong> vendendo na internet,
+              através do seu negócio digital sem estoque.
+            </p>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="gift-card reveal">
-        <p class="attn">ATENÇÃO: As vagas para essa aula bônus são LIMITADAS.</p>
+    <div class="gift-band">
+      <div class="wrap">
+        <div class="gift-card reveal">
+          <p class="attn">ATENÇÃO: As vagas para essa aula bônus são LIMITADAS.</p>
 
-        <ul class="checks">
-          <li><span class="ic">✅</span><span>O passo a passo para <strong>acelerar seus resultados sem estoque</strong> — sem esconder nada</span></li>
-          <li><span class="ic">✅</span><span>Como ter acesso às <strong>indicações de fornecedores nacionais</strong></span></li>
-          <li><span class="ic">✅</span><span>Os atalhos pra sair na frente de todo mundo: tem pessoas fazendo a <strong>primeira venda em até 24 horas</strong> depois da aula secreta 😱</span></li>
-        </ul>
+          <ul class="checks">
+            <li><span class="ic">✅</span><span>O passo a passo para <strong>acelerar seus resultados sem estoque</strong> — sem esconder nada</span></li>
+            <li><span class="ic">✅</span><span>Como ter acesso às <strong>indicações de fornecedores nacionais</strong></span></li>
+            <li><span class="ic">✅</span><span>Os atalhos pra sair na frente de todo mundo: tem pessoas fazendo a <strong>primeira venda em até 24 horas</strong> depois da aula secreta 😱</span></li>
+          </ul>
 
-        <p class="link-warn">⚠️ O link da aula secreta só é enviado no grupo do WhatsApp.</p>
-        <p class="link-sub">Entre agora no grupo para garantir a sua vaga. É lá que o Cassio manda o link da transmissão, os avisos e os materiais da aula.</p>
+          <p class="link-warn">⚠️ O link da aula secreta só é enviado no grupo do WhatsApp.</p>
+          <p class="link-sub">Entre agora no grupo para garantir a sua vaga. É lá que o Cassio manda o link da transmissão, os avisos e os materiais da aula.</p>
 
-        <div class="cta-wrap">
-          <!-- ⚠️ TROQUE o href abaixo pelo link do grupo do WhatsApp da aula secreta -->
-          <a class="btn block-btn" id="cta-aula" href="#LINK-DO-GRUPO-WHATSAPP" target="_blank" rel="noopener">Toque para garantir sua presença gratuitamente</a>
-          <p class="btn-sub center">Grupo 100% gratuito · Só avisos da aula, sem spam</p>
+          <div class="cta-wrap">
+            <!-- ⚠️ TROQUE o href abaixo pelo link do grupo do WhatsApp da aula secreta -->
+            <a class="btn" id="cta-aula" href="#LINK-DO-GRUPO-WHATSAPP" target="_blank" rel="noopener">Toque para garantir sua presença gratuitamente</a>
+            <p class="btn-sub">Grupo 100% gratuito · Só avisos da aula, sem spam</p>
+          </div>
         </div>
       </div>
     </div>
@@ -489,7 +496,7 @@
   </section>
 
   <!-- ============================== PASSO 3 ============================== -->
-  <section class="block alt" id="passo-3">
+  <section class="block" id="passo-3" style="padding-top:0">
     <div class="wrap reveal">
       <div class="block-head">
         <span class="num" aria-hidden="true">3</span>
@@ -501,7 +508,7 @@
 
   <!-- ============================== DÚVIDAS RÁPIDAS ============================== -->
   <section class="faq-sec" id="duvidas">
-    <div class="wrap narrow">
+    <div class="wrap">
       <h2 class="reveal">Dúvidas rápidas</h2>
 
       <div class="faq reveal">
