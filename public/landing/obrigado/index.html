@@ -11,7 +11,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet" />
 
   <style>
     /* =================================================================
@@ -40,10 +40,11 @@
       --alert:      #B42318;
 
       --radius:     14px;
-      --max:        1100px;
+      --max:        820px;
       --col:        620px;        /* coluna central, largura do vídeo da referência */
 
-      --font: 'Open Sans', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font: Arial, 'Helvetica Neue', Helvetica, 'Segoe UI', system-ui, sans-serif;
+      --font-display: 'Montserrat', Arial, 'Helvetica Neue', Helvetica, sans-serif;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -62,7 +63,7 @@
     .col  { width: 100%; max-width: var(--col); margin: 0 auto; }
     .center { text-align: center; }
 
-    h1, h2, h3 { margin: 0; font-weight: 700; line-height: 1.2; text-wrap: balance; }
+    h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
     .hl { color: var(--green); }
 
     /* ----------------------------------------------------------------
@@ -70,7 +71,7 @@
        ---------------------------------------------------------------- */
     .topbar {
       background: var(--green); color: #fff; text-align: center;
-      font-weight: 700; text-transform: uppercase;
+      font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
       font-size: clamp(1.25rem, 3.4vw, 2.4rem); line-height: 1.2; letter-spacing: 0.01em;
       padding: 34px 16px;
     }
@@ -85,18 +86,18 @@
     .steps li { display: flex; align-items: center; gap: 12px; }
     .box {
       display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
-      min-width: 190px; min-height: 90px; padding: 14px 22px; border-radius: var(--radius);
+      min-width: 150px; min-height: 74px; padding: 12px 18px; border-radius: var(--radius);
       background: var(--green); color: #fff; text-align: center;
-      font-weight: 700; font-size: 1.25rem; line-height: 1.3; text-transform: uppercase;
+      font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; line-height: 1.3; text-transform: uppercase;
     }
-    .box small { display: block; font-size: 1.25rem; font-weight: 700; }
+    .box small { display: block; font-size: 1.05rem; font-weight: 700; }
     .box.current {
       background: var(--green);
       box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--green), 0 14px 34px -12px rgba(0,166,80,0.8);
       animation: pulse 2.2s ease-in-out infinite;
     }
     .chev { color: var(--green); display: inline-grid; place-items: center; }
-    .chev svg { width: 40px; height: 40px; }
+    .chev svg { width: 34px; height: 34px; }
     @keyframes pulse {
       0%,100% { box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--green), 0 14px 34px -12px rgba(0,166,80,0.8); }
       50%     { box-shadow: 0 0 0 4px #fff, 0 0 0 9px rgba(0,166,80,0.55), 0 14px 34px -12px rgba(0,166,80,0.8); }
@@ -125,17 +126,35 @@
     .gift-line { margin-top: 18px; font-weight: 700; font-size: clamp(1rem, 2.2vw, 1.2rem); }
     .warn {
       margin: 34px auto 0; max-width: 960px;
-      background: #FFF7E0; border: 2px solid var(--yellow); border-radius: var(--radius);
+      background: #F6F7F8; border: 2px solid #E3E6E8; border-radius: var(--radius);
       padding: 22px 26px; color: var(--ink-2); font-size: clamp(0.98rem, 2vw, 1.12rem);
     }
     .warn strong { color: var(--ink); }
 
+    /* Fundo escuro com feixes esverdeados (referência enviada). Se existir
+       assets/fundo-aula.jpg, a imagem entra por cima dos gradientes. */
+    .dark-tex {
+      position: relative; color: #fff;
+      background-color: #0B0F12;
+      background-image:
+        url('assets/fundo-aula.jpg'),
+        linear-gradient(180deg, rgba(20,60,55,0.55) 0%, rgba(20,60,55,0.12) 40%, transparent 70%),
+        linear-gradient(90deg, transparent 22%, rgba(60,140,120,0.22) 28%, rgba(60,140,120,0.10) 34%, transparent 42%),
+        linear-gradient(90deg, transparent 78%, rgba(60,140,120,0.32) 85%, rgba(60,140,120,0.14) 92%, transparent 100%),
+        radial-gradient(ellipse 90% 60% at 50% 100%, #050708 0%, transparent 70%),
+        linear-gradient(180deg, #0F171A 0%, #0B0F12 60%, #070A0C 100%);
+      background-size: cover, 100% 100%, 100% 70%, 100% 80%, 100% 100%, 100% 100%;
+      background-position: center, top, top, top, bottom, top;
+      background-repeat: no-repeat;
+    }
+    .dark-tex::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55)); pointer-events: none; }
+    .dark-tex > .wrap { position: relative; z-index: 1; }
+
     /* ----------------------------------------------------------------
-       FAIXA AMARELA (bloco de CTA da referência)
+       FAIXA DE CTA (fundo escuro texturizado)
        ---------------------------------------------------------------- */
-    .band { background: var(--yellow); padding: 64px 0; text-align: center; }
-    .band .t { font-weight: 700; font-size: clamp(1.1rem, 2.4vw, 1.5rem); color: var(--ink); }
-    .band .s { margin-top: 10px; color: #4A3A12; font-size: clamp(0.95rem, 2vw, 1.1rem); }
+    .band { padding: 64px 0; text-align: center; }
+    .band .t { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.1rem, 2.4vw, 1.5rem); color: #fff; }
     .band .btn { margin-top: 28px; }
 
     /* Botão verde retangular com brilho (QUERO PARCELAR) */
@@ -143,7 +162,7 @@
       position: relative; overflow: hidden;
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
       padding: 18px 40px; border-radius: 8px; text-decoration: none;
-      font-weight: 700; text-transform: uppercase; color: #fff;
+      font-family: var(--font-display); font-weight: 800; text-transform: uppercase; color: #fff;
       font-size: clamp(1rem, 2.3vw, 1.3rem); letter-spacing: 0.01em; text-align: center; max-width: 100%;
       background: linear-gradient(180deg, #4CC553 0%, var(--green-btn) 55%, var(--green-btn-d) 100%);
       box-shadow: 0 0 22px rgba(60,176,67,0.75), 0 8px 22px -10px rgba(46,156,54,0.9);
@@ -158,7 +177,7 @@
       transform: translateX(-120%); transition: transform .75s ease;
     }
     .btn:hover::after { transform: translateX(120%); }
-    .btn-sub { margin-top: 12px; color: #4A3A12; font-size: 0.92rem; }
+    .btn-sub { margin-top: 12px; color: rgba(255,255,255,0.7); font-size: 0.92rem; }
 
     /* ----------------------------------------------------------------
        BLOCOS NUMERADOS
@@ -168,15 +187,15 @@
     .num {
       display: inline-grid; place-items: center; vertical-align: middle;
       width: 50px; height: 50px; border-radius: 12px; margin-right: 14px;
-      background: var(--green); color: #fff; font-weight: 800; font-size: 1.35rem;
+      background: var(--green); color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 1.35rem;
     }
     .block h2 { display: inline; font-size: clamp(1.6rem, 4.2vw, 2.6rem); font-weight: 800; vertical-align: middle; }
     .block .sub { margin: 18px auto 0; max-width: 860px; color: var(--ink-2); font-size: clamp(1rem, 2.2vw, 1.25rem); text-align: center; }
     @media (max-width: 600px) { .num { width: 40px; height: 40px; font-size: 1.1rem; margin-right: 10px; border-radius: 10px; } }
 
     /* Passo 1: credenciais + prévia do login */
-    .access { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 34px; align-items: center; margin-top: 40px; }
-    @media (max-width: 860px) { .access { grid-template-columns: 1fr; } }
+    .access { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: center; margin-top: 36px; }
+    .access .shot { max-width: 520px; margin: 0 auto; width: 100%; }
     .access .intro { color: var(--ink-2); font-size: clamp(1rem, 2.2vw, 1.2rem); margin-bottom: 18px; }
     .creds {
       background: #fff; border: 2px solid var(--green); border-radius: var(--radius); padding: 26px 28px;
@@ -187,7 +206,7 @@
     .cred a { color: var(--green-d); font-weight: 600; word-break: break-all; }
     .cred code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      background: #FFF7E0; border: 1px solid var(--yellow); color: var(--ink);
+      background: #F0F2F3; border: 1px solid #DDE1E4; color: var(--ink);
       padding: 5px 14px; border-radius: 8px; font-weight: 700; font-size: 1.05em;
     }
     .copy {
@@ -225,31 +244,14 @@
     /* ----------------------------------------------------------------
        PRESENTE SURPRESA (fundo branco + card na faixa amarela)
        ---------------------------------------------------------------- */
-    /* Fundo escuro com feixes esverdeados (referência enviada). Se existir
-       assets/fundo-aula.jpg, a imagem entra por cima dos gradientes. */
-    .gift {
-      position: relative; padding: 72px 0 0; text-align: center; color: #fff;
-      background-color: #0B0F12;
-      background-image:
-        url('assets/fundo-aula.jpg'),
-        linear-gradient(180deg, rgba(20,60,55,0.55) 0%, rgba(20,60,55,0.12) 40%, transparent 70%),
-        linear-gradient(90deg, transparent 22%, rgba(60,140,120,0.22) 28%, rgba(60,140,120,0.10) 34%, transparent 42%),
-        linear-gradient(90deg, transparent 78%, rgba(60,140,120,0.32) 85%, rgba(60,140,120,0.14) 92%, transparent 100%),
-        radial-gradient(ellipse 90% 60% at 50% 100%, #050708 0%, transparent 70%),
-        linear-gradient(180deg, #0F171A 0%, #0B0F12 60%, #070A0C 100%);
-      background-size: cover, 100% 100%, 100% 70%, 100% 80%, 100% 100%, 100% 100%;
-      background-position: center, top, top, top, bottom, top;
-      background-repeat: no-repeat;
-    }
-    .gift::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55)); pointer-events: none; }
-    .gift > .wrap { position: relative; z-index: 1; }
-    .gift-band { position: relative; z-index: 1; }
+    .gift { padding: 72px 0 80px; text-align: center; }
 
     .gift .tag {
       display: inline-flex; align-items: center; gap: 8px; padding: 12px 26px; border-radius: 8px;
-      background: var(--yellow); color: var(--ink); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.9rem;
+      background: var(--green); color: #fff; font-family: var(--font-display); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.9rem;
     }
-    .gift-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 40px; align-items: center; text-align: left; margin-top: 30px; }
+    .gift-grid { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: center; text-align: center; margin-top: 30px; }
+    .gift-photo { max-width: 340px; margin: 0 auto; width: 100%; }
     .gift-photo { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,0.6); }
     .gift-photo img { width: 100%; height: auto; aspect-ratio: 4/5; object-fit: cover; }
     .gift-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(15,22,19,0.9) 100%); }
@@ -269,7 +271,7 @@
       .gift-grid { grid-template-columns: 1fr; text-align: center; gap: 28px; }
       .gift-photo { max-width: 360px; margin: 0 auto; }
     }
-    .gift-band { margin-top: 56px; background: var(--yellow); padding: 56px 0 64px; }
+    .gift-band { margin-top: 44px; }
     .gift-card {
       max-width: 960px; margin: 0 auto; background: #fff; color: var(--ink); border-radius: var(--radius);
       padding: clamp(24px, 4vw, 40px); text-align: left; box-shadow: 0 30px 60px -40px rgba(0,0,0,0.5);
@@ -310,7 +312,7 @@
     .faq .ans a { color: var(--green-d); font-weight: 600; }
     .faq .ans code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      background: #FFF7E0; border: 1px solid var(--yellow); padding: 2px 8px; border-radius: 6px; font-weight: 700;
+      background: #F0F2F3; border: 1px solid #DDE1E4; padding: 2px 8px; border-radius: 6px; font-weight: 700;
     }
     @media (max-width: 600px) {
       .faq summary { padding: 16px 16px; }
@@ -432,7 +434,7 @@
     </div>
   </section>
 
-  <div class="band">
+  <div class="band dark-tex">
     <div class="wrap">
       <p class="t">Seu acesso ao Sistema DEP já está liberado. Entre agora com os dados acima:</p>
       <a class="btn big" href="https://canalico.curseduca.pro/login" target="_blank" rel="noopener">Acessar o Sistema DEP agora</a>
@@ -440,13 +442,13 @@
   </div>
 
   <!-- ============================== PRESENTE SURPRESA ============================== -->
-  <section class="gift" id="presente">
+  <section class="gift dark-tex" id="presente">
     <div class="wrap">
       <div class="reveal">
         <span class="tag">🎁 Presente surpresa liberado</span>
         <div class="gift-grid">
           <div class="gift-photo">
-            <img src="assets/cassio-canali.jpg" alt="Cassio Canali sorrindo, segurando um carrinho de compras em miniatura" width="880" height="1100" loading="lazy" />
+            <img src="assets/cassio-canali.jpg" alt="Cassio Canali sorrindo, segurando um carrinho de compras em miniatura" width="880" height="1100" />
             <div class="cap"><b>Cassio Canali</b><span>Fundador da Canali Company · criador do Sistema DEP</span></div>
           </div>
           <div>
@@ -460,8 +462,8 @@
       </div>
     </div>
 
-    <div class="gift-band">
-      <div class="wrap">
+    <div class="gift-band wrap">
+      <div>
         <div class="gift-card reveal">
           <p class="attn">ATENÇÃO: As vagas para essa aula bônus são LIMITADAS.</p>
 
