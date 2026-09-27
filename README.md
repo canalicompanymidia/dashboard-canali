@@ -700,12 +700,19 @@ supabase/
 
 public/landing/
 ├── index.html                  Landing page da Canali Company (HTML + Tailwind CDN + JS puro)
-└── assets/                     Fotos e prints da landing (ver assets/README.md)
+├── assets/                     Fotos e prints da landing (ver assets/README.md)
+└── obrigado/
+    ├── index.html              Página de obrigado do Mercado Livre Sem Estoque (HTML + CSS + JS puro)
+    └── assets/                 Foto do Cássio e print da tela de login (ver obrigado/assets/README.md)
 ```
 
 A landing page é independente do painel: um único arquivo, sem build. Abra o
 `public/landing/index.html` no navegador para conferir, ou acesse
 `/landing/index.html` no domínio publicado.
+
+A página de obrigado segue a mesma ideia e fica em `/landing/obrigado/index.html`.
+Antes de publicar, troque o `href` do botão da aula secreta (marcado com
+`LINK-DO-GRUPO-WHATSAPP`) pelo link real do grupo.
 
 ---
 

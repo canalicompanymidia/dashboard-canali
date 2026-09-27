@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inscrição confirmada — Mercado Livre Sem Estoque | Canali Company</title>
+  <meta name="description" content="Sua inscrição foi aprovada e seu acesso ao Sistema DEP já está liberado. Veja como entrar na plataforma e garanta seu presente surpresa." />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#00A650" />
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =================================================================
+       TOKENS — paleta puxada da página de vendas (etapa4v-sse):
+       fundo branco, verde dos passos, faixa amarela, botão verde com brilho.
+       ================================================================= */
+    :root {
+      --bg:        #FFFFFF;
+      --mint:      #EAF7F0;            /* faixas alternadas (referência obg-sistema) */
+      --mint-2:    #DDF3E6;
+      --ink:       #111111;
+      --ink-2:     #3A3A3A;
+      --ink-3:     #6B6B6B;
+      --line:      #DCE7E0;
+
+      --green:     #00A650;            /* verde das pílulas PASSO X */
+      --green-d:   #00893F;
+      --green-btn: #3CB043;            /* botão QUERO PARCELAR */
+      --green-btn-2: #2E9C36;
+      --green-soft:#E3F6EB;
+
+      --yellow:    #F2C46A;            /* faixa amarela da página de vendas */
+      --yellow-soft:#FFF5D6;
+      --amber:     #8A5A00;
+
+      --red-bar:   #F86A6A;            /* barra do topo (será verde aqui) */
+      --gray-step: #9E9E9E;
+
+      --dark:      #0F1613;            /* seção do presente surpresa */
+      --dark-2:    #172019;
+
+      --radius: 20px;
+      --radius-sm: 14px;
+      --max: 1000px;
+
+      --font-display: 'Montserrat', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      --font-body:    'Inter', 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: var(--font-body); line-height: 1.6;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    p { margin: 0; }
+    img, svg { display: block; }
+    :focus-visible { outline: 3px solid var(--green); outline-offset: 3px; border-radius: 6px; }
+
+    .wrap { width: 100%; max-width: var(--max); margin: 0 auto; padding: 0 16px; }
+    .narrow { max-width: 820px; }
+
+    h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.12; letter-spacing: -0.02em; text-wrap: balance; }
+    .hl { color: var(--green); }
+
+    /* ----------------------------------------------------------------
+       BARRA VERDE DO TOPO (no lugar da barra vermelha)
+       ---------------------------------------------------------------- */
+    .topbar {
+      background: var(--green);
+      color: #fff; text-align: center;
+      font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
+      font-size: clamp(1rem, 3vw, 1.6rem); letter-spacing: 0.01em;
+      padding: 22px 16px;
+    }
+
+    /* ----------------------------------------------------------------
+       INDICADOR DE PASSOS (mesma linguagem das pílulas verdes)
+       ---------------------------------------------------------------- */
+    .steps {
+      list-style: none; margin: 0; padding: 34px 0 6px;
+      display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px;
+    }
+    .steps li { display: flex; align-items: center; gap: 10px; }
+    .pill {
+      display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+      min-width: 150px; padding: 12px 20px; border-radius: 12px;
+      background: var(--green); color: #fff;
+      font-family: var(--font-display); font-weight: 700; text-transform: uppercase;
+      font-size: 0.95rem; line-height: 1.3; text-align: center;
+      box-shadow: 0 6px 16px -8px rgba(0,166,80,0.6);
+    }
+    .pill small { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; opacity: 0.95; }
+    .pill.current {
+      background: linear-gradient(180deg, #14C062, var(--green));
+      font-size: 1.05rem; padding: 16px 26px;
+      box-shadow: 0 0 0 5px rgba(0,166,80,0.18), 0 16px 34px -14px rgba(0,166,80,0.9);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    .chev { color: var(--green); display: inline-grid; place-items: center; }
+    .chev svg { width: 30px; height: 30px; }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 5px rgba(0,166,80,0.18), 0 16px 34px -14px rgba(0,166,80,0.9); }
+      50%     { box-shadow: 0 0 0 10px rgba(0,166,80,0.08), 0 16px 34px -14px rgba(0,166,80,0.9); }
+    }
+    @media (max-width: 720px) {
+      .steps { gap: 8px; padding-top: 26px; }
+      .pill { min-width: 0; padding: 9px 12px; font-size: 0.72rem; border-radius: 10px; }
+      .pill small { font-size: 0.6rem; }
+      .pill.current { font-size: 0.85rem; padding: 12px 16px; width: 100%; }
+      .steps li.last { width: 100%; justify-content: center; margin-top: 4px; }
+      .chev svg { width: 20px; height: 20px; }
+    }
+
+    /* ----------------------------------------------------------------
+       HERÓI (fundo menta, como a referência)
+       ---------------------------------------------------------------- */
+    .hero { background: linear-gradient(180deg, #F3FBF6 0%, var(--mint) 100%); padding-bottom: 56px; text-align: center; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 34px; padding: 10px 22px; border-radius: 999px;
+      background: var(--green-soft); color: var(--green-d);
+      font-family: var(--font-display); font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.8rem;
+    }
+    h1 { font-size: clamp(2rem, 5.6vw, 3.6rem); font-weight: 900; margin-top: 22px; }
+    .lead { margin: 22px auto 0; max-width: 820px; color: var(--ink-2); font-size: clamp(1.02rem, 2.3vw, 1.3rem); }
+    .gift-line { margin-top: 22px; font-weight: 700; font-size: clamp(1rem, 2.2vw, 1.15rem); }
+    .warn {
+      margin: 40px auto 0; max-width: 1000px;
+      background: var(--yellow-soft); border: 1px solid #F2DDA5; border-radius: var(--radius);
+      padding: 26px 30px; color: var(--amber); font-size: clamp(0.98rem, 2vw, 1.12rem); font-weight: 500;
+      text-align: center;
+    }
+    .warn strong { color: #6B4500; }
+
+    /* ----------------------------------------------------------------
+       BLOCOS NUMERADOS
+       ---------------------------------------------------------------- */
+    .block { padding: 68px 0; }
+    .block.alt { background: var(--mint); }
+    .block-head { text-align: center; }
+    .num {
+      display: inline-grid; place-items: center; vertical-align: middle;
+      width: 54px; height: 54px; border-radius: 50%; margin-right: 14px;
+      background: var(--green); color: #fff;
+      font-family: var(--font-display); font-weight: 800; font-size: 1.4rem;
+      box-shadow: 0 8px 18px -8px rgba(0,166,80,0.7);
+    }
+    .block h2 { display: inline; font-size: clamp(1.7rem, 4.6vw, 3rem); font-weight: 800; vertical-align: middle; }
+    .block .sub { margin: 20px auto 0; max-width: 900px; color: var(--ink-2); font-size: clamp(1rem, 2.2vw, 1.25rem); text-align: center; }
+    @media (max-width: 600px) {
+      .num { width: 42px; height: 42px; font-size: 1.1rem; margin-right: 10px; }
+    }
+
+    /* Passo 1: credenciais + mock de login */
+    .access { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 34px; align-items: center; margin-top: 44px; }
+    @media (max-width: 860px) { .access { grid-template-columns: 1fr; } }
+    .access .intro { color: var(--ink-2); font-size: clamp(1rem, 2.2vw, 1.25rem); margin-bottom: 20px; }
+
+    .creds {
+      background: #fff; border-radius: var(--radius); padding: 28px 30px;
+      box-shadow: 0 24px 50px -30px rgba(0,80,40,0.35), 0 0 0 1px rgba(0,0,0,0.03);
+      display: grid; gap: 18px;
+    }
+    .cred { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: clamp(1rem, 2.1vw, 1.2rem); }
+    .cred .k { font-family: var(--font-display); font-weight: 700; }
+    .cred a { color: var(--green-d); font-weight: 600; word-break: break-all; }
+    .cred code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--yellow-soft); border: 1px solid #F2DDA5; color: var(--ink);
+      padding: 6px 16px; border-radius: 12px; font-weight: 700; font-size: 1.05em;
+    }
+    .copy {
+      appearance: none; border: 1px solid var(--line); background: #fff; color: var(--ink-3);
+      font: inherit; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .copy:hover { border-color: var(--green); color: var(--green-d); }
+    .copy.ok { background: var(--green-soft); border-color: var(--green); color: var(--green-d); }
+    .hint { color: var(--ink-3); font-size: 0.95rem; }
+
+    /* Prévia da tela de login da plataforma. Se existir assets/login-plataforma.png
+       (print real), ele aparece; senão, a réplica em CSS abaixo assume. */
+    .shot { border-radius: var(--radius); overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,0.7); background: #0A0A0A; }
+    .shot img { width: 100%; height: auto; }
+    .shot.has-img .mock { display: none; }
+    .shot:not(.has-img) img { display: none; }
+    .mock {
+      background: radial-gradient(ellipse 80% 60% at 50% 30%, #161616 0%, #0A0A0A 70%);
+      padding: 36px 28px 30px; color: #fff; text-align: center; user-select: none; pointer-events: none;
+      font-family: var(--font-body);
+    }
+    .mock .logo { display: flex; align-items: center; justify-content: center; gap: 10px; color: #fff; }
+    .mock .logo svg { height: 34px; width: auto; }
+    .mock .logo span { font-family: var(--font-display); font-weight: 600; font-size: 1.6rem; letter-spacing: -0.02em; }
+    .mock .t { margin-top: 30px; font-weight: 700; font-size: 1.1rem; }
+    .mock .f { margin-top: 20px; text-align: left; display: grid; gap: 14px; }
+    .mock .in {
+      height: 52px; border-radius: 10px; background: #1F1F1F; border: 1px solid rgba(255,255,255,0.06);
+      padding: 0 16px; display: flex; align-items: center; justify-content: space-between; color: rgba(255,255,255,0.45); font-size: 1rem;
+    }
+    .mock .in svg { width: 20px; height: 20px; color: rgba(255,255,255,0.45); }
+    .mock .forgot { text-align: right; font-size: 0.95rem; color: rgba(255,255,255,0.85); margin-top: -2px; }
+    .mock .go { height: 54px; border-radius: 10px; background: #5088C6; color: #0B1220; display: grid; place-items: center; font-weight: 700; font-size: 1.1rem; }
+    .mock .new { margin-top: 18px; font-size: 0.95rem; color: rgba(255,255,255,0.75); }
+    .mock .new b { color: #6FA3E8; font-weight: 500; }
+
+    /* Botões (pílula verde com brilho, como QUERO PARCELAR) */
+    .btn {
+      position: relative; overflow: hidden;
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 22px 44px; border-radius: 999px; text-decoration: none;
+      font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
+      font-size: clamp(1rem, 2.4vw, 1.3rem); letter-spacing: 0.01em; color: #fff;
+      background: linear-gradient(180deg, #4CC553 0%, var(--green-btn) 55%, var(--green-btn-2) 100%);
+      box-shadow: 0 0 26px rgba(60,176,67,0.55), 0 14px 30px -14px rgba(46,156,54,0.9);
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+      text-align: center; max-width: 100%;
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.04); box-shadow: 0 0 34px rgba(60,176,67,0.7), 0 18px 36px -14px rgba(46,156,54,0.95); }
+    .btn:active { transform: translateY(0); }
+    .btn::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.35) 50%, transparent 75%);
+      transform: translateX(-120%); transition: transform .75s ease;
+    }
+    .btn:hover::after { transform: translateX(120%); }
+    .btn.block-btn { display: flex; width: 100%; }
+    .center { text-align: center; }
+    .cta-wrap { margin-top: 40px; }
+    .btn-sub { margin-top: 14px; color: var(--ink-3); font-size: 0.92rem; }
+
+    /* ----------------------------------------------------------------
+       PRESENTE SURPRESA (fundo escuro, como a referência)
+       ---------------------------------------------------------------- */
+    .gift { background: radial-gradient(ellipse 70% 50% at 50% 0%, #1C3A2A 0%, var(--dark) 70%); color: #fff; padding: 80px 0; text-align: center; }
+    .gift .tag {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 26px; border-radius: 999px;
+      background: var(--yellow); color: #4A2E00;
+      font-family: var(--font-display); font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.85rem;
+      box-shadow: 0 10px 30px -14px rgba(242,196,106,0.9);
+    }
+    .gift h2 { margin-top: 28px; font-size: clamp(1.9rem, 5.2vw, 3.4rem); font-weight: 900; color: #fff; }
+    .gift h2 .hl { color: #3ED67A; }
+    .gift .desc { margin: 24px auto 0; max-width: 900px; color: rgba(255,255,255,0.85); font-size: clamp(1.02rem, 2.3vw, 1.25rem); }
+    .gift .desc strong { color: #fff; }
+    .gift-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 40px; align-items: center; text-align: left; margin-top: 10px; }
+    .gift-photo { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: 0 40px 80px -40px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06); }
+    .gift-photo img { width: 100%; height: auto; aspect-ratio: 4/5; object-fit: cover; }
+    .gift-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(15,22,19,0.85) 100%); }
+    .gift-photo .cap { position: absolute; left: 20px; right: 20px; bottom: 18px; z-index: 1; }
+    .gift-photo .cap b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
+    .gift-photo .cap span { display: block; color: rgba(255,255,255,0.75); font-size: 0.85rem; }
+    .gift-grid .tag { }
+    .gift-grid h2 { text-align: left; }
+    .gift-grid .desc { margin-left: 0; text-align: left; }
+    @media (max-width: 860px) {
+      .gift-grid { grid-template-columns: 1fr; text-align: center; gap: 28px; }
+      .gift-grid h2, .gift-grid .desc { text-align: center; }
+      .gift-photo { max-width: 360px; margin: 0 auto; }
+    }
+    .gift-card {
+      margin: 40px auto 0; max-width: 1000px; background: #fff; color: var(--ink);
+      border-radius: var(--radius); padding: clamp(24px, 4vw, 44px) clamp(20px, 4vw, 44px);
+      box-shadow: 0 40px 80px -40px rgba(0,0,0,0.8);
+      text-align: left;
+    }
+    .gift-card .attn { text-align: center; font-family: var(--font-display); font-weight: 800; font-size: clamp(1rem, 2.4vw, 1.2rem); color: #B42318; margin-bottom: 26px; }
+    .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+    .checks li { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: start; font-size: clamp(1rem, 2.2vw, 1.2rem); color: var(--ink-2); }
+    .checks li .ic { font-size: 1.2em; line-height: 1.4; }
+    .checks li strong { color: var(--ink); }
+    .gift-card .link-warn { margin-top: 30px; text-align: center; font-family: var(--font-display); font-weight: 800; font-size: clamp(1.05rem, 2.4vw, 1.3rem); }
+    .gift-card .link-sub { margin-top: 12px; text-align: center; color: var(--ink-2); font-size: clamp(1rem, 2vw, 1.15rem); }
+    .gift-card .cta-wrap { margin-top: 30px; }
+
+    /* ----------------------------------------------------------------
+       FAQ — Dúvidas rápidas (cards brancos com "+")
+       ---------------------------------------------------------------- */
+    .faq-sec { padding: 72px 0 90px; }
+    .faq-sec h2 { text-align: center; font-size: clamp(1.9rem, 5vw, 3rem); font-weight: 800; }
+    .faq { margin-top: 40px; display: grid; gap: 14px; }
+    .faq details {
+      background: #fff; border: 1.5px solid #1F2A24; border-radius: 16px;
+      box-shadow: 0 6px 18px -14px rgba(0,0,0,0.35);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .faq details[open] { border-color: var(--green); box-shadow: 0 14px 30px -20px rgba(0,166,80,0.45); }
+    .faq summary {
+      list-style: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 24px 28px; font-family: var(--font-display); font-weight: 700; font-size: clamp(1.02rem, 2.3vw, 1.3rem);
+    }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary .plus {
+      flex: 0 0 auto; width: 40px; height: 40px; border-radius: 8px;
+      display: grid; place-items: center; background: var(--green-soft); color: var(--green-d);
+      transition: transform .25s ease, background .2s, color .2s;
+    }
+    .faq summary .plus svg { width: 20px; height: 20px; }
+    .faq details[open] summary .plus { transform: rotate(45deg); background: var(--green); color: #fff; }
+    .faq .ans { padding: 0 28px 26px; color: var(--ink-2); font-size: clamp(0.98rem, 2vw, 1.1rem); }
+    .faq .ans a { color: var(--green-d); font-weight: 600; }
+    .faq .ans code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--yellow-soft); border: 1px solid #F2DDA5; padding: 2px 8px; border-radius: 6px; font-weight: 700;
+    }
+    @media (max-width: 600px) {
+      .faq summary { padding: 18px 18px; }
+      .faq .ans { padding: 0 18px 20px; }
+      .faq summary .plus { width: 34px; height: 34px; }
+    }
+
+    /* ----------------------------------------------------------------
+       RODAPÉ
+       ---------------------------------------------------------------- */
+    footer { background: var(--mint); padding: 34px 0 44px; text-align: center; color: var(--ink-3); font-size: 0.9rem; }
+    footer .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; margin-bottom: 12px; }
+    footer .brand svg { height: 26px; width: auto; }
+    footer .brand span { font-family: var(--font-display); font-weight: 700; }
+    footer p + p { margin-top: 6px; }
+
+    /* Revelação no scroll */
+    .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+    .reveal.is-visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .pill.current { animation: none; }
+      .btn::after { display: none; }
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Marca Canali (mesmo desenho compacto usado na landing) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="canali-mark" viewBox="180 92 654 436">
+      <path fill="currentColor" d="M191.00 153.30Q200.79 288.00 191.00 422.70Q181.21 288.00 191.00 153.30ZM247.00 114.75Q262.73 288.00 247.00 461.25Q231.27 288.00 247.00 114.75ZM303.00 99.28Q320.26 288.00 303.00 476.72Q285.74 288.00 303.00 99.28ZM359.00 101.07Q372.90 288.00 359.00 474.93Q345.10 288.00 359.00 101.07ZM415.00 120.67Q422.47 288.00 415.00 455.33Q407.53 288.00 415.00 120.67ZM471.00 166.41Q473.24 288.00 471.00 409.59Q468.76 288.00 471.00 166.41ZM541.00 197.30Q543.54 332.00 541.00 466.70Q538.46 332.00 541.00 197.30ZM597.00 158.75Q605.95 332.00 597.00 505.25Q588.05 332.00 597.00 158.75ZM653.00 143.28Q667.97 332.00 653.00 520.72Q638.03 332.00 653.00 143.28ZM709.00 145.07Q726.36 332.00 709.00 518.93Q691.64 332.00 709.00 145.07ZM765.00 164.67Q779.77 332.00 765.00 499.33Q750.23 332.00 765.00 164.67ZM821.00 210.41Q829.14 332.00 821.00 453.59Q812.86 332.00 821.00 210.41Z"/>
+    </symbol>
+  </svg>
+
+  <!-- ============================== BARRA VERDE ============================== -->
+  <div class="topbar" role="status">Bem-vindo(a) ao Mercado Livre Sem Estoque! 🎉</div>
+
+  <!-- ============================== HERÓI ============================== -->
+  <header class="hero">
+    <div class="wrap">
+
+      <!-- Indicador de avanço: passos concluídos + inscrição confirmada em destaque -->
+      <ol class="steps" aria-label="Progresso da sua inscrição">
+        <li><span class="pill">Passo 1 <small>Concluído!</small></span></li>
+        <li><span class="pill">Passo 2 <small>Concluído!</small></span></li>
+        <li><span class="pill">Passo 3 <small>Concluído!</small></span>
+          <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg></span>
+        </li>
+        <li class="last"><span class="pill current" aria-current="step">✅ Inscrição confirmada</span></li>
+      </ol>
+
+      <div class="badge">✅ Acesso liberado</div>
+      <h1>Sua inscrição foi aprovada e seu acesso <span class="hl">já está liberado.</span></h1>
+      <p class="lead">Em menos de 2 minutos você entra na plataforma e começa a aplicar o <strong>Sistema DEP</strong>.</p>
+      <p class="gift-line">🎁 E tem um presente surpresa te esperando nessa página... continua rolando para baixo.</p>
+
+      <div class="warn">
+        ⚠️ Você vai receber um <strong>e-mail</strong> e uma <strong>mensagem no WhatsApp</strong> com seus dados de acesso.
+        O WhatsApp pode demorar um pouco (por instabilidades de disparo da Meta), mas não precisa esperar:
+        <strong>seu acesso já funciona agora</strong>, seguindo o passo abaixo: 👇
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================== PASSO 1 ============================== -->
+  <section class="block" id="passo-1">
+    <div class="wrap">
+      <div class="block-head reveal">
+        <span class="num" aria-hidden="true">1</span>
+        <h2>Entre na <span class="hl">plataforma</span> agora</h2>
+      </div>
+
+      <div class="access reveal">
+        <div>
+          <p class="intro">Todo o sistema e os seus bônus ficam em um lugar só. Faça login com os dados abaixo:</p>
+          <div class="creds">
+            <div class="cred">
+              <span class="k">🌐 Endereço:</span>
+              <a href="https://canalico.curseduca.pro/login" target="_blank" rel="noopener">https://canalico.curseduca.pro/login</a>
+              <button class="copy" type="button" data-copy="https://canalico.curseduca.pro/login">Copiar</button>
+            </div>
+            <div class="cred">
+              <span class="k">📧 Login:</span>
+              <span>o e-mail que você usou na compra</span>
+            </div>
+            <div class="cred">
+              <span class="k">🔑 Senha padrão:</span>
+              <code>Canali@2026</code>
+              <button class="copy" type="button" data-copy="Canali@2026">Copiar</button>
+            </div>
+            <p class="hint">Recomendamos trocar a senha no primeiro acesso.</p>
+          </div>
+        </div>
+
+        <!-- Prévia da tela de login: print real (assets/login-plataforma.png) ou réplica em CSS -->
+        <div class="shot" id="shot">
+          <img src="assets/login-plataforma.png" alt="Tela de login da plataforma Canali Co.: campos de e-mail e senha e botão Entrar"
+               onload="document.getElementById('shot').classList.add('has-img')" />
+          <div class="mock" aria-hidden="true">
+            <div class="logo">
+              <svg viewBox="180 92 654 436"><use href="#canali-mark" /></svg>
+              <span>Canali Co.</span>
+            </div>
+            <div class="t">Acesse sua área de membros</div>
+            <div class="f">
+              <div class="in">Digite seu email</div>
+              <div class="in">Digite sua senha
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.2 4.2M9.9 5.1A10.4 10.4 0 0 1 12 5c5 0 9 4 10 7a11.6 11.6 0 0 1-2.5 3.7M6.6 6.6C4.2 8 2.7 10.2 2 12c1 3 5 7 10 7 1.6 0 3.1-.4 4.4-1"/></svg>
+              </div>
+              <div class="forgot">Esqueci minha senha</div>
+              <div class="go">Entrar</div>
+            </div>
+            <div class="new">Não é membro ainda? <b>Criar uma conta</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="center cta-wrap reveal">
+        <a class="btn" href="https://canalico.curseduca.pro/login" target="_blank" rel="noopener">Acessar o Sistema DEP agora →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== PRESENTE SURPRESA ============================== -->
+  <section class="gift" id="presente">
+    <div class="wrap">
+      <div class="gift-grid reveal">
+        <div class="gift-photo">
+          <img src="assets/cassio-canali.jpg" alt="Cassio Canali sorrindo, segurando um carrinho de compras em miniatura" width="880" height="1100" loading="lazy" />
+          <div class="cap"><b>Cassio Canali</b><span>Fundador da Canali Company · criador do Sistema DEP</span></div>
+        </div>
+        <div>
+          <span class="tag">🎁 Presente surpresa liberado</span>
+          <h2>Você ganhou uma <span class="hl">AULA SECRETA AO VIVO</span> com o Cassio Canali!</h2>
+          <p class="desc">
+            A rota estratégica para sair do nível iniciante e alcançar <strong>até R$100 mil por mês</strong> vendendo na internet,
+            através do seu negócio digital sem estoque.
+          </p>
+        </div>
+      </div>
+
+      <div class="gift-card reveal">
+        <p class="attn">ATENÇÃO: As vagas para essa aula bônus são LIMITADAS.</p>
+
+        <ul class="checks">
+          <li><span class="ic">✅</span><span>O passo a passo para <strong>acelerar seus resultados sem estoque</strong> — sem esconder nada</span></li>
+          <li><span class="ic">✅</span><span>Como ter acesso às <strong>indicações de fornecedores nacionais</strong></span></li>
+          <li><span class="ic">✅</span><span>Os atalhos pra sair na frente de todo mundo: tem pessoas fazendo a <strong>primeira venda em até 24 horas</strong> depois da aula secreta 😱</span></li>
+        </ul>
+
+        <p class="link-warn">⚠️ O link da aula secreta só é enviado no grupo do WhatsApp.</p>
+        <p class="link-sub">Entre agora no grupo para garantir a sua vaga. É lá que o Cassio manda o link da transmissão, os avisos e os materiais da aula.</p>
+
+        <div class="cta-wrap">
+          <!-- ⚠️ TROQUE o href abaixo pelo link do grupo do WhatsApp da aula secreta -->
+          <a class="btn block-btn" id="cta-aula" href="#LINK-DO-GRUPO-WHATSAPP" target="_blank" rel="noopener">Toque para garantir sua presença gratuitamente</a>
+          <p class="btn-sub center">Grupo 100% gratuito · Só avisos da aula, sem spam</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== PASSO 2 ============================== -->
+  <section class="block" id="passo-2">
+    <div class="wrap reveal">
+      <div class="block-head">
+        <span class="num" aria-hidden="true">2</span>
+        <h2>Acesse o <span class="hl">Sistema</span> ainda hoje</h2>
+      </div>
+      <p class="sub">Dentro da plataforma, comece pela etapa de boas-vindas: <strong>quem começa no primeiro dia sai na frente.</strong></p>
+    </div>
+  </section>
+
+  <!-- ============================== PASSO 3 ============================== -->
+  <section class="block alt" id="passo-3">
+    <div class="wrap reveal">
+      <div class="block-head">
+        <span class="num" aria-hidden="true">3</span>
+        <h2>Fique de olho no <span class="hl">e-mail</span> e no <span class="hl">WhatsApp</span></h2>
+      </div>
+      <p class="sub">É por lá que eu e o meu time enviamos avisos importantes, novidades e conteúdos extras.</p>
+    </div>
+  </section>
+
+  <!-- ============================== DÚVIDAS RÁPIDAS ============================== -->
+  <section class="faq-sec" id="duvidas">
+    <div class="wrap narrow">
+      <h2 class="reveal">Dúvidas rápidas</h2>
+
+      <div class="faq reveal">
+        <details>
+          <summary>Não recebi o e-mail com os acessos
+            <span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="ans">
+            Você não precisa do e-mail para entrar. Acesse <a href="https://canalico.curseduca.pro/login" target="_blank" rel="noopener">canalico.curseduca.pro/login</a>,
+            use o e-mail da compra como login e a senha padrão <code>Canali@2026</code>. O e-mail pode levar alguns minutos e cair
+            nas abas <strong>Promoções</strong> ou <strong>Spam</strong>. Vale conferir lá também.
+          </div>
+        </details>
+
+        <details>
+          <summary>O WhatsApp ainda não chegou
+            <span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="ans">
+            Sem problema. O disparo pelo WhatsApp depende da Meta e às vezes atrasa. Seu acesso já está liberado e funciona
+            agora com os dados desta página. A mensagem vai chegar, mas você não precisa esperar por ela.
+          </div>
+        </details>
+
+        <details>
+          <summary>Minha senha não funciona
+            <span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="ans">
+            Confira se digitou exatamente <code>Canali@2026</code> (C maiúsculo e o símbolo @) e se o e-mail é o mesmo usado na compra.
+            Se ainda assim não entrar, clique em <strong>"Esqueci minha senha"</strong> na tela de login e siga o link que chega no seu e-mail.
+          </div>
+        </details>
+
+        <details>
+          <summary>Funciona no celular?
+            <span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="ans">
+            Sim. A plataforma abre em qualquer navegador de celular, tablet ou computador. Basta acessar o mesmo endereço e fazer login.
+            Você pode começar no celular e continuar no computador de onde parou.
+          </div>
+        </details>
+
+        <details>
+          <summary>Me inscrevi mas me arrependi, e agora?
+            <span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="ans">
+            Você tem <strong>7 dias de garantia</strong> a partir da compra. Basta responder o e-mail de boas-vindas pedindo o cancelamento
+            e o reembolso é feito pela mesma plataforma de pagamento. Mas dá uma chance: entre hoje, faça a etapa de boas-vindas
+            e veja o Sistema DEP funcionando antes de decidir.
+          </div>
+        </details>
+
+        <details>
+          <summary>Como participo da aula secreta ao vivo?
+            <span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="ans">
+            Toque no botão <a href="#presente">"Garantir sua presença"</a> desta página e entre no grupo do WhatsApp.
+            O link da aula é enviado <strong>somente no grupo</strong>, então ative as notificações. As vagas são limitadas.
+          </div>
+        </details>
+
+        <details>
+          <summary>Preciso falar com alguém
+            <span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          </summary>
+          <div class="ans">
+            Responda o e-mail de boas-vindas ou a mensagem do WhatsApp que você receber: o time de suporte da Canali Company
+            atende por lá em horário comercial.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== RODAPÉ ============================== -->
+  <footer>
+    <div class="wrap">
+      <a class="brand" href="https://canalico.curseduca.pro/login" aria-label="Canali Company">
+        <svg viewBox="180 92 654 436" role="img" aria-hidden="true"><use href="#canali-mark" /></svg>
+        <span>Canali Company</span>
+      </a>
+      <p>Copyright © 2026 – Todos os direitos reservados.</p>
+      <p>Esta página não faz parte do Mercado Livre, do Facebook, do Instagram ou da Meta.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Botões "Copiar" nas credenciais
+    document.querySelectorAll('.copy').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var texto = btn.getAttribute('data-copy');
+        try {
+          await navigator.clipboard.writeText(texto);
+          btn.textContent = 'Copiado ✓'; btn.classList.add('ok');
+          setTimeout(function () { btn.textContent = 'Copiar'; btn.classList.remove('ok'); }, 1800);
+        } catch (e) {
+          var alvo = btn.previousElementSibling;
+          if (alvo && window.getSelection) {
+            var r = document.createRange(); r.selectNodeContents(alvo);
+            var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+          }
+        }
+      });
+    });
+
+    // Revelação no scroll
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); }
+        });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+    } else {
+      document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('is-visible'); });
+    }
+
+    // Só uma dúvida aberta por vez
+    var faqs = document.querySelectorAll('.faq details');
+    faqs.forEach(function (d) {
+      d.addEventListener('toggle', function () {
+        if (d.open) faqs.forEach(function (o) { if (o !== d) o.open = false; });
+      });
+    });
+  </script>
+</body>
+</html>
