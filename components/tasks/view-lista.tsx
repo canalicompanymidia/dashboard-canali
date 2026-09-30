@@ -1,14 +1,16 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronRight, CornerDownRight, Plus } from 'lucide-react'
+import { AlertTriangle, ChevronRight, CornerDownRight, Plus, X } from 'lucide-react'
 
 import { atualizarTarefa, criarTarefa } from '@/app/tasks/actions'
 import { Avatares, DataChip, PrioridadeFlag, StatusDot, StatusPill } from '@/components/tasks/pecas'
 import { DataPicker, PessoasPicker, PrioridadePicker, StatusPicker } from '@/components/tasks/pickers'
-import { useTasks } from '@/components/tasks/provider'
+import { useEventosDeTarefa, useTasks } from '@/components/tasks/provider'
 import { Indicadores } from '@/components/tasks/task-row'
 import { useAcao } from '@/components/tasks/use-acao'
+import { Button } from '@/components/ui/button'
+import { aplicarPatchLocal, type PatchLocal } from '@/lib/tasks/patch-local'
 import { statusEncerra, type ListaContexto, type Status, type Tarefa } from '@/lib/tasks/types'
 import { cn } from '@/lib/utils'
 
@@ -21,10 +23,22 @@ export function ViewLista({ contexto, tarefas }: { contexto: ListaContexto; tare
   const { statuses, lista } = contexto
   const [itens, setItens] = React.useState(tarefas)
   React.useEffect(() => setItens(tarefas), [tarefas])
+  // O modal avisa o que mudou; a lista acompanha sem ir ao servidor.
+  useEventosDeTarefa(lista.id, setItens)
 
   const [fechados, setFechados] = React.useState<Set<string>>(
     () => new Set(statuses.filter((s) => statusEncerra(s.tipo)).map((s) => s.id)),
   )
+
+  // O erro de uma linha vive aqui, e não na linha: ao mudar de status a
+  // linha troca de grupo (é desmontada e remontada), e um estado dentro
+  // dela se perderia junto.
+  const [erro, setErro] = React.useState<string | null>(null)
+  React.useEffect(() => {
+    if (!erro) return
+    const t = setTimeout(() => setErro(null), 6000)
+    return () => clearTimeout(t)
+  }, [erro])
 
   function substituir(t: Tarefa) {
     setItens((atual) => atual.map((x) => (x.id === t.id ? t : x)))
@@ -32,6 +46,15 @@ export function ViewLista({ contexto, tarefas }: { contexto: ListaContexto; tare
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-5 px-3 py-4 sm:px-6">
+      {erro ? (
+        <div role="alert" className="sticky top-0 z-10 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertTriangle className="size-3.5 shrink-0" />
+          <span className="flex-1">{erro}</span>
+          <Button variant="ghost" size="icon-sm" className="size-6 text-destructive" onClick={() => setErro(null)} aria-label="Fechar aviso">
+            <X className="size-3.5" />
+          </Button>
+        </div>
+      ) : null}
       {statuses.map((status) => {
         const doStatus = itens.filter((t) => t.status_id === status.id && !t.pai_id)
         const fechado = fechados.has(status.id)
@@ -74,6 +97,7 @@ export function ViewLista({ contexto, tarefas }: { contexto: ListaContexto; tare
                     subtarefas={itens.filter((s) => s.pai_id === t.id)}
                     statuses={statuses}
                     onAtualizar={substituir}
+                    aoErro={setErro}
                   />
                 ))}
                 <NovaLinha
@@ -95,22 +119,36 @@ function Linha({
   subtarefas,
   statuses,
   onAtualizar,
+  aoErro,
   nivel = 0,
 }: {
   tarefa: Tarefa
   subtarefas: Tarefa[]
   statuses: Status[]
   onAtualizar: (t: Tarefa) => void
+  aoErro: (mensagem: string) => void
   nivel?: number
 }) {
-  const { abrirTarefa } = useTasks()
-  const { executar } = useAcao()
+  const { abrirTarefa, prefetchTarefa } = useTasks()
   const [aberto, setAberto] = React.useState(false)
   const concluida = statusEncerra(tarefa.status_tipo)
 
-  async function patch(p: Parameters<typeof atualizarTarefa>[1]) {
-    const nova = await executar(() => atualizarTarefa(tarefa.id, p))
-    if (nova) onAtualizar(nova)
+  // Otimista: a linha muda no clique; se o servidor recusar, volta e o
+  // aviso sobe para a lista (esta linha pode já ter sido remontada).
+  async function patch(p: PatchLocal) {
+    const anterior = tarefa
+    onAtualizar(aplicarPatchLocal(tarefa, p, statuses))
+    try {
+      const res = await atualizarTarefa(tarefa.id, p)
+      if (res.ok) onAtualizar(res.data.tarefa)
+      else {
+        onAtualizar(anterior)
+        aoErro(res.message)
+      }
+    } catch (e) {
+      onAtualizar(anterior)
+      aoErro(e instanceof Error ? e.message : 'Falha inesperada. Tente de novo.')
+    }
   }
 
   return (
@@ -146,6 +184,7 @@ function Linha({
         <button
           type="button"
           onClick={() => abrirTarefa(tarefa.id)}
+          onMouseEnter={() => prefetchTarefa(tarefa.id)}
           className={cn('min-w-0 flex-1 truncate py-2 text-left hover:underline', concluida && 'text-muted-foreground line-through')}
         >
           {tarefa.titulo}
@@ -191,7 +230,7 @@ function Linha({
 
       {aberto
         ? subtarefas.map((s) => (
-            <Linha key={s.id} tarefa={s} subtarefas={[]} statuses={statuses} onAtualizar={onAtualizar} nivel={nivel + 1} />
+            <Linha key={s.id} tarefa={s} subtarefas={[]} statuses={statuses} onAtualizar={onAtualizar} aoErro={aoErro} nivel={nivel + 1} />
           ))
         : null}
     </>

@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react'
 
 import { criarTarefa, moverTarefa } from '@/app/tasks/actions'
 import { Avatares, ChipsDeCampos, DataChip, PrioridadeFlag, StatusPill } from '@/components/tasks/pecas'
-import { useTasks } from '@/components/tasks/provider'
+import { useEventosDeTarefa, useTasks } from '@/components/tasks/provider'
 import { Indicadores } from '@/components/tasks/task-row'
 import { useAcao } from '@/components/tasks/use-acao'
 import { statusEncerra, type ListaContexto, type Status, type Tarefa } from '@/lib/tasks/types'
@@ -21,6 +21,7 @@ export function ViewQuadro({ contexto, tarefas }: { contexto: ListaContexto; tar
   const { executar, erro, setErro } = useAcao()
   const [itens, setItens] = React.useState(tarefas)
   React.useEffect(() => setItens(tarefas), [tarefas])
+  useEventosDeTarefa(lista.id, setItens)
 
   const [arrastando, setArrastando] = React.useState<string | null>(null)
   const [sobre, setSobre] = React.useState<string | null>(null)
@@ -77,7 +78,7 @@ export function ViewQuadro({ contexto, tarefas }: { contexto: ListaContexto; tar
 
     const salvo = await executar(() => moverTarefa({ tarefa_id: id, status_id: status.id, posicao }))
     if (!salvo) setItens((atual) => atual.map((t) => (t.id === id ? original : t)))
-    else setItens((atual) => atual.map((t) => (t.id === id ? salvo : t)))
+    else setItens((atual) => atual.map((t) => (t.id === id ? salvo.tarefa : t)))
   }
 
   return (
@@ -171,11 +172,12 @@ function Card({
   onDragEnd: () => void
   onDrop: React.DragEventHandler<HTMLDivElement>
 }) {
-  const { abrirTarefa } = useTasks()
+  const { abrirTarefa, prefetchTarefa } = useTasks()
   const concluida = statusEncerra(tarefa.status_tipo)
 
   return (
     <div
+      onMouseEnter={() => prefetchTarefa(tarefa.id)}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}

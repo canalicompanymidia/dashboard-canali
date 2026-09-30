@@ -65,11 +65,22 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // getUser() valida o token no servidor de auth. Trocar por getSession()
-  // aqui aceitaria um cookie forjado.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // getClaims() confere a ASSINATURA do token (com a chave pública do
+  // projeto, guardada em cache) e a validade, sem uma viagem ao servidor
+  // de auth a cada clique. Um cookie forjado ou vencido reprova do mesmo
+  // jeito. A autorização de verdade — estar na lista e ativo — continua
+  // sendo lida do banco em cada página, por requireColaborador().
+  const { data, error } = await supabase.auth.getClaims()
+  let user: unknown = error ? null : data?.claims
+
+  // Se a verificação local não puder acontecer (chave pública fora do
+  // ar, formato antigo de token), cai para a checagem no servidor de
+  // auth, que era o comportamento anterior. Nunca abre: só troca o
+  // verificador.
+  if (!user) {
+    const { data: viaServidor } = await supabase.auth.getUser()
+    user = viaServidor.user
+  }
 
   if (!user) {
     const login = request.nextUrl.clone()

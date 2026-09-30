@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { cache } from 'react'
+
 import type { Colaborador } from '@/lib/auth'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
@@ -44,20 +46,17 @@ function db() {
   return getSupabaseAdminClient()
 }
 
-/** true quando a migration 0006 já rodou neste banco. */
+/** true quando a migration 0006 já rodou neste banco. Reaproveita a leitura dos espaços. */
 export async function tasksDisponivel(): Promise<boolean> {
-  const supabase = db()
-  if (!supabase) return false
-  const { error } = await supabase.from('tarefas_espacos').select('id').limit(1)
-  return !error
+  return !(await carregarEspacos()).erro
 }
 
 // ---------------------------------------------------------------------------
 //  Pessoas
 // ---------------------------------------------------------------------------
 
-/** Colaboradores ativos — os únicos que podem ser responsáveis por algo. */
-export async function getPessoas(): Promise<Pessoa[]> {
+/** Colaboradores ativos — os únicos que podem ser responsáveis por algo. Uma leitura por requisição. */
+export const getPessoas = cache(async (): Promise<Pessoa[]> => {
   const supabase = db()
   if (!supabase) return []
 
@@ -74,15 +73,20 @@ export async function getPessoas(): Promise<Pessoa[]> {
     nome: (linha.nome as string | null) ?? null,
     papel: linha.papel === 'admin' ? 'admin' : 'colaborador',
   }))
-}
+})
 
 // ---------------------------------------------------------------------------
 //  Espaços, pastas e listas
 // ---------------------------------------------------------------------------
 
-async function carregarEspacos(): Promise<{ espacos: Espaco[]; membros: Map<string, string[]> }> {
+/**
+ * Espaços e membros, lidos UMA vez por requisição: cabeçalho, layout,
+ * página e as checagens de permissão usam a mesma resposta.
+ */
+const carregarEspacos = cache(
+  async (): Promise<{ espacos: Espaco[]; membros: Map<string, string[]>; erro: boolean }> => {
   const supabase = db()
-  if (!supabase) return { espacos: [], membros: new Map() }
+  if (!supabase) return { espacos: [], membros: new Map(), erro: true }
 
   const [espacosRes, membrosRes] = await Promise.all([
     supabase.from('tarefas_espacos').select('*').order('posicao').order('created_at'),
@@ -96,8 +100,9 @@ async function carregarEspacos(): Promise<{ espacos: Espaco[]; membros: Map<stri
     membros.set(linha.espaco_id, lista)
   }
 
-  return { espacos: (espacosRes.data ?? []) as Espaco[], membros }
-}
+  return { espacos: (espacosRes.data ?? []) as Espaco[], membros, erro: Boolean(espacosRes.error) }
+  },
+)
 
 /** Espaços que esta pessoa pode ver, já com a lista de membros. */
 export async function getEspacosVisiveis(colab: Colaborador): Promise<(Espaco & { membros: string[] })[]> {
@@ -118,20 +123,7 @@ export async function getArvore(colab: Colaborador): Promise<EspacoComArvore[]> 
   const espacos = await getEspacosVisiveis(colab)
   if (espacos.length === 0) return []
 
-  const ids = espacos.map((e) => e.id)
-
-  const [pastasRes, listasRes] = await Promise.all([
-    supabase.from('tarefas_pastas').select('*').in('espaco_id', ids).order('posicao').order('created_at'),
-    supabase
-      .from('v_tarefas_listas_resumo')
-      .select('*')
-      .in('espaco_id', ids)
-      .order('posicao')
-      .order('created_at'),
-  ])
-
-  const pastas = (pastasRes.data ?? []) as Pasta[]
-  const listas = (listasRes.data ?? []) as Lista[]
+  const { pastas, listas } = await carregarPastasEListas(espacos.map((e) => e.id).join(','))
 
   return espacos.map((espaco) => {
     const pastasDoEspaco: PastaComListas[] = pastas
@@ -145,6 +137,24 @@ export async function getArvore(colab: Colaborador): Promise<EspacoComArvore[]> 
     }
   })
 }
+
+const carregarPastasEListas = cache(async (idsChave: string): Promise<{ pastas: Pasta[]; listas: Lista[] }> => {
+  const supabase = db()
+  const ids = idsChave.split(',').filter(Boolean)
+  if (!supabase || ids.length === 0) return { pastas: [], listas: [] }
+
+  const [pastasRes, listasRes] = await Promise.all([
+    supabase.from('tarefas_pastas').select('*').in('espaco_id', ids).order('posicao').order('created_at'),
+    supabase
+      .from('v_tarefas_listas_resumo')
+      .select('*')
+      .in('espaco_id', ids)
+      .order('posicao')
+      .order('created_at'),
+  ])
+
+  return { pastas: (pastasRes.data ?? []) as Pasta[], listas: (listasRes.data ?? []) as Lista[] }
+})
 
 export async function getEspaco(id: string, colab: Colaborador): Promise<EspacoComArvore | null> {
   const arvore = await getArvore(colab)
@@ -164,7 +174,7 @@ export async function getPasta(
 }
 
 /** Status de uma lista, na ordem do quadro. */
-export async function getStatuses(listaId: string): Promise<Status[]> {
+export const getStatuses = cache(async (listaId: string): Promise<Status[]> => {
   const supabase = db()
   if (!supabase) return []
 
@@ -176,10 +186,10 @@ export async function getStatuses(listaId: string): Promise<Status[]> {
     .order('created_at')
 
   return (data ?? []) as Status[]
-}
+})
 
 /** Campos que valem para uma lista: os do espaço inteiro + os só dela. */
-export async function getCampos(espacoId: string, listaId: string): Promise<Campo[]> {
+export const getCampos = cache(async (espacoId: string, listaId: string): Promise<Campo[]> => {
   const supabase = db()
   if (!supabase) return []
 
@@ -192,7 +202,7 @@ export async function getCampos(espacoId: string, listaId: string): Promise<Camp
     .order('created_at')
 
   return (data ?? []).map(normalizarCampo)
-}
+})
 
 function normalizarCampo(linha: Record<string, unknown>): Campo {
   return {

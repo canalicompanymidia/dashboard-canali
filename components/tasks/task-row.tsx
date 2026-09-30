@@ -23,13 +23,14 @@ export function TaskRow({
   mostrarStatus?: boolean
   className?: string
 }) {
-  const { abrirTarefa } = useTasks()
+  const { abrirTarefa, prefetchTarefa } = useTasks()
   const concluida = statusEncerra(tarefa.status_tipo)
 
   return (
     <button
       type="button"
       onClick={() => abrirTarefa(tarefa.id)}
+      onMouseEnter={() => prefetchTarefa(tarefa.id)}
       className={cn(
         'flex min-h-9 w-full items-center gap-2.5 rounded-md px-2 text-left text-[13px] transition-colors hover:bg-accent/60',
         className,

@@ -73,6 +73,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { aplicarPatchLocal, type PatchLocal } from '@/lib/tasks/patch-local'
 import {
   formatarDataCurta,
   formatarDataHora,
@@ -102,16 +103,23 @@ import { cn } from '@/lib/utils'
  * ser alterado; nada de botão "Salvar".
  */
 
-type Patch = Parameters<typeof atualizarTarefa>[1]
+type Patch = PatchLocal
 
 export function TaskDetailDialog({ tarefaId }: { tarefaId: string }) {
-  const { fecharTarefa } = useTasks()
+  const { fecharTarefa, pegarDetalhe } = useTasks()
   const [detalhe, setDetalhe] = React.useState<TarefaDetalhe | null>(null)
   const [erroCarga, setErroCarga] = React.useState<string | null>(null)
+  // Algo mudou aqui dentro? Então, ao fechar, a tela de baixo recarrega
+  // uma vez (contadores da barra lateral, painéis do Início).
+  const sujo = React.useRef(false)
+  const marcarSujo = React.useCallback(() => {
+    sujo.current = true
+  }, [])
+  const fechar = React.useCallback(() => fecharTarefa({ atualizar: sujo.current }), [fecharTarefa])
 
   React.useEffect(() => {
     let ativo = true
-    carregarTarefa(tarefaId).then((r) => {
+    pegarDetalhe(tarefaId).then((r) => {
       if (!ativo) return
       if (r.ok) setDetalhe(r.data)
       else setErroCarga(r.message)
@@ -119,10 +127,10 @@ export function TaskDetailDialog({ tarefaId }: { tarefaId: string }) {
     return () => {
       ativo = false
     }
-  }, [tarefaId])
+  }, [tarefaId, pegarDetalhe])
 
   return (
-    <Dialog open onOpenChange={(o) => !o && fecharTarefa()}>
+    <Dialog open onOpenChange={(o) => !o && fechar()}>
       <DialogContent
         showCloseButton={false}
         className={cn(
@@ -134,7 +142,7 @@ export function TaskDetailDialog({ tarefaId }: { tarefaId: string }) {
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
             <DialogTitle className="font-serif text-xl">Não deu para abrir a tarefa</DialogTitle>
             <p className="text-sm text-muted-foreground">{erroCarga}</p>
-            <Button variant="outline" onClick={fecharTarefa}>
+            <Button variant="outline" onClick={fechar}>
               Fechar
             </Button>
           </div>
@@ -144,7 +152,7 @@ export function TaskDetailDialog({ tarefaId }: { tarefaId: string }) {
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <Detalhe detalhe={detalhe} setDetalhe={setDetalhe} />
+          <Detalhe detalhe={detalhe} setDetalhe={setDetalhe} fechar={fechar} marcarSujo={marcarSujo} />
         )}
       </DialogContent>
     </Dialog>
@@ -158,12 +166,16 @@ export function TaskDetailDialog({ tarefaId }: { tarefaId: string }) {
 export function Detalhe({
   detalhe,
   setDetalhe,
+  fechar,
+  marcarSujo,
 }: {
   detalhe: TarefaDetalhe
   setDetalhe: React.Dispatch<React.SetStateAction<TarefaDetalhe | null>>
+  fechar: () => void
+  marcarSujo: () => void
 }) {
   const { tarefa, statuses, campos } = detalhe
-  const { fecharTarefa, abrirTarefa, arvore, colab } = useTasks()
+  const { abrirTarefa, arvore, colab, emitir } = useTasks()
   const { executar, erro, setErro } = useAcao()
   const [confirmarExclusao, setConfirmarExclusao] = React.useState(false)
   const [moverAberto, setMoverAberto] = React.useState(false)
@@ -173,30 +185,39 @@ export function Detalhe({
     [setDetalhe],
   )
 
+  /**
+   * Salva um campo: a tela muda na hora (cópia local), o servidor confirma
+   * por trás e devolve a tarefa gravada e as linhas de histórico que
+   * criou. Se recusar, a cópia anterior volta e o erro aparece no topo.
+   */
   const salvar = React.useCallback(
     async (patch: Patch) => {
-      const nova = await executar(() => atualizarTarefa(tarefa.id, patch))
-      if (nova) atualizar((d) => ({ ...d, tarefa: nova }))
-      return nova
+      const guardado: { tarefa: Tarefa | null } = { tarefa: null }
+      atualizar((d) => {
+        guardado.tarefa = d.tarefa
+        return { ...d, tarefa: aplicarPatchLocal(d.tarefa, patch, d.statuses) }
+      })
+      const res = await executar(() => atualizarTarefa(tarefa.id, patch))
+      if (res) {
+        atualizar((d) => ({ ...d, tarefa: res.tarefa, atividades: [...d.atividades, ...res.atividades] }))
+        emitir({ tipo: 'atualizada', tarefa: res.tarefa })
+        marcarSujo()
+        return res.tarefa
+      }
+      const anterior = guardado.tarefa
+      if (anterior) atualizar((d) => ({ ...d, tarefa: anterior }))
+      return undefined
     },
-    [executar, tarefa.id, atualizar],
+    [executar, tarefa.id, atualizar, emitir, marcarSujo],
   )
 
-  // O histórico é recarregado depois de cada mudança — é o servidor que
-  // escreve as linhas, então só ele sabe o texto exato de cada uma.
+  // Só para o que o servidor gera sem devolver (anexos, mudança de lista).
   const recarregarHistorico = React.useCallback(async () => {
     const r = await carregarTarefa(tarefa.id)
     if (r.ok) atualizar((d) => ({ ...d, atividades: r.data.atividades, comentarios: r.data.comentarios }))
   }, [tarefa.id, atualizar])
 
-  const salvarComHistorico = React.useCallback(
-    async (patch: Patch) => {
-      const nova = await salvar(patch)
-      if (nova) void recarregarHistorico()
-      return nova
-    },
-    [salvar, recarregarHistorico],
-  )
+  const salvarComHistorico = salvar
 
   const concluida = statusEncerra(tarefa.status_tipo)
   const listasDestino = React.useMemo(() => listasDaArvore(arvore), [arvore])
@@ -248,7 +269,10 @@ export function Detalhe({
             <DropdownMenuItem
               onSelect={async () => {
                 const copia = await executar(() => duplicarTarefa(tarefa.id))
-                if (copia) abrirTarefa(copia.id)
+                if (copia) {
+                  emitir({ tipo: 'criada', tarefa: copia })
+                  abrirTarefa(copia.id)
+                }
               }}
             >
               <Copy />
@@ -268,7 +292,7 @@ export function Detalhe({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="ghost" size="icon-sm" onClick={fecharTarefa} aria-label="Fechar">
+        <Button variant="ghost" size="icon-sm" onClick={fechar} aria-label="Fechar">
           <X className="size-4" />
         </Button>
       </div>
@@ -305,7 +329,11 @@ export function Detalhe({
                 tarefa={tarefa}
                 subtarefas={detalhe.subtarefas}
                 statuses={statuses}
-                onAdicionar={(nova) => atualizar((d) => ({ ...d, subtarefas: [...d.subtarefas, nova] }))}
+                onAdicionar={(nova) => {
+                  atualizar((d) => ({ ...d, subtarefas: [...d.subtarefas, nova] }))
+                  emitir({ tipo: 'criada', tarefa: nova })
+                  marcarSujo()
+                }}
                 onAtualizar={(sub) =>
                   atualizar((d) => ({ ...d, subtarefas: d.subtarefas.map((s) => (s.id === sub.id ? sub : s)) }))
                 }
@@ -315,14 +343,20 @@ export function Detalhe({
             <Checklist
               tarefa={tarefa}
               itens={detalhe.checklist}
-              setItens={(fn) => atualizar((d) => ({ ...d, checklist: fn(d.checklist) }))}
+              setItens={(fn) => {
+                marcarSujo()
+                atualizar((d) => ({ ...d, checklist: fn(d.checklist) }))
+              }}
             />
 
             <Anexos
               tarefa={tarefa}
               anexos={detalhe.anexos}
               setAnexos={(fn) => atualizar((d) => ({ ...d, anexos: fn(d.anexos) }))}
-              aoMudar={recarregarHistorico}
+              aoMudar={() => {
+                marcarSujo()
+                void recarregarHistorico()
+              }}
             />
 
             <p className="text-[11px] text-muted-foreground">
@@ -337,7 +371,10 @@ export function Detalhe({
         <Atividade
           detalhe={detalhe}
           colabEmail={colab.email}
-          setComentarios={(fn) => atualizar((d) => ({ ...d, comentarios: fn(d.comentarios) }))}
+          setComentarios={(fn) => {
+            marcarSujo()
+            atualizar((d) => ({ ...d, comentarios: fn(d.comentarios) }))
+          }}
         />
       </div>
 
@@ -352,7 +389,10 @@ export function Detalhe({
           </>
         }
         onConfirmar={() => excluirTarefa(tarefa.id)}
-        aoConcluir={fecharTarefa}
+        aoConcluir={() => {
+          emitir({ tipo: 'removida', id: tarefa.id })
+          fechar()
+        }}
       />
 
       <Dialog open={moverAberto} onOpenChange={setMoverAberto}>
@@ -370,6 +410,9 @@ export function Detalhe({
               if (!listaId) return
               const nova = await executar(() => moverParaLista({ tarefa_id: tarefa.id, lista_id: listaId }))
               if (nova) {
+                // Saiu desta lista: a visualização de baixo a remove.
+                emitir({ tipo: 'atualizada', tarefa: nova })
+                marcarSujo()
                 setMoverAberto(false)
                 const r = await carregarTarefa(nova.id)
                 if (r.ok) setDetalhe(r.data)
@@ -650,7 +693,7 @@ function Subtarefas({
   onAdicionar: (t: Tarefa) => void
   onAtualizar: (t: Tarefa) => void
 }) {
-  const { abrirTarefa } = useTasks()
+  const { abrirTarefa, emitir, prefetchTarefa } = useTasks()
   const { executar, pendente } = useAcao()
   const [titulo, setTitulo] = React.useState('')
   const [adicionando, setAdicionando] = React.useState(false)
@@ -681,8 +724,15 @@ function Subtarefas({
                 statuses={statuses}
                 valor={sub.status_id}
                 onChange={async (s) => {
-                  const nova = await executar(() => atualizarTarefa(sub.id, { status_id: s.id }))
-                  if (nova) onAtualizar(nova)
+                  const anterior = sub
+                  onAtualizar(aplicarPatchLocal(sub, { status_id: s.id }, statuses))
+                  const res = await executar(() => atualizarTarefa(sub.id, { status_id: s.id }))
+                  if (res) {
+                    onAtualizar(res.tarefa)
+                    emitir({ tipo: 'atualizada', tarefa: res.tarefa })
+                  } else {
+                    onAtualizar(anterior)
+                  }
                 }}
               >
                 <button type="button" className="flex size-6 items-center justify-center rounded hover:bg-accent" aria-label={`Status: ${sub.status_nome}`}>
@@ -692,6 +742,7 @@ function Subtarefas({
               <button
                 type="button"
                 onClick={() => abrirTarefa(sub.id)}
+                onMouseEnter={() => prefetchTarefa(sub.id)}
                 className={cn('min-w-0 flex-1 truncate text-left text-sm hover:underline', statusEncerra(sub.status_tipo) && 'text-muted-foreground line-through')}
               >
                 {sub.titulo}
@@ -757,7 +808,7 @@ function Checklist({
   async function adicionar() {
     const t = texto.trim()
     if (!t) return setAdicionando(false)
-    const item = await executar(() => adicionarItemChecklist({ tarefa_id: tarefa.id, texto: t }), { atualizar: false })
+    const item = await executar(() => adicionarItemChecklist({ tarefa_id: tarefa.id, texto: t }))
     if (item) {
       setItens((atual) => [...atual, item])
       setTexto('')
@@ -779,7 +830,7 @@ function Checklist({
                 onChange={async (e) => {
                   const feito = e.target.checked
                   setItens((atual) => atual.map((i) => (i.id === item.id ? { ...i, feito } : i)))
-                  const salvo = await executar(() => alternarItemChecklist(item.id, feito), { atualizar: false })
+                  const salvo = await executar(() => alternarItemChecklist(item.id, feito))
                   if (!salvo) setItens((atual) => atual.map((i) => (i.id === item.id ? { ...i, feito: !feito } : i)))
                 }}
                 className="size-4 accent-current"
@@ -789,7 +840,7 @@ function Checklist({
               <button
                 type="button"
                 onClick={async () => {
-                  const ok = await executar(() => excluirItemChecklist(item.id), { atualizar: false })
+                  const ok = await executar(() => excluirItemChecklist(item.id))
                   if (ok !== undefined) setItens((atual) => atual.filter((i) => i.id !== item.id))
                 }}
                 className="rounded p-1 text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
@@ -1006,7 +1057,7 @@ function Anexos({
                     <button
                       type="button"
                       onClick={async () => {
-                        const ok = await executar(() => excluirAnexo(a.id), { atualizar: false })
+                        const ok = await executar(() => excluirAnexo(a.id))
                         if (ok !== undefined) {
                           setAnexos((atual) => atual.filter((x) => x.id !== a.id))
                           aoMudar()
@@ -1097,12 +1148,12 @@ function Atividade({
                 podeEditar={podeEditarComentario(colab, item.comentario.autor)}
                 podeApagar={podeApagarComentario(colab, item.comentario.autor)}
                 onEditar={async (t) => {
-                  const salvo = await executar(() => editarComentario(item.comentario.id, t), { atualizar: false })
+                  const salvo = await executar(() => editarComentario(item.comentario.id, t))
                   if (salvo) setComentarios((atual) => atual.map((c) => (c.id === salvo.id ? salvo : c)))
                   return Boolean(salvo)
                 }}
                 onExcluir={async () => {
-                  const ok = await executar(() => excluirComentario(item.comentario.id), { atualizar: false })
+                  const ok = await executar(() => excluirComentario(item.comentario.id))
                   if (ok !== undefined) setComentarios((atual) => atual.filter((c) => c.id !== item.comentario.id))
                 }}
               />

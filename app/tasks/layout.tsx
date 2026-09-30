@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { Database } from 'lucide-react'
 
+import { AtualizarAoVoltar } from '@/components/tasks/atualizar-ao-voltar'
 import { TasksProvider } from '@/components/tasks/provider'
 import { TasksSidebar } from '@/components/tasks/sidebar'
 import { TaskOverlay } from '@/components/tasks/task-overlay'
@@ -37,6 +38,7 @@ export default async function TasksLayout({ children }: { children: React.ReactN
       <Suspense fallback={null}>
         <TaskOverlay />
       </Suspense>
+      <AtualizarAoVoltar />
     </TasksProvider>
   )
 }

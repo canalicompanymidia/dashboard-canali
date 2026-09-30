@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { atualizarTarefa } from '@/app/tasks/actions'
 import { StatusDot } from '@/components/tasks/pecas'
-import { useTasks } from '@/components/tasks/provider'
+import { useEventosDeTarefa, useTasks } from '@/components/tasks/provider'
 import { useAcao } from '@/components/tasks/use-acao'
 import { Button } from '@/components/ui/button'
 import { DIAS_SEMANA_CURTOS, diaDaSemana, hojeISO, somarDias } from '@/lib/tasks/datas'
@@ -17,14 +17,14 @@ import { MONTH_NAMES, cn } from '@/lib/utils'
  * muda a data; clicar abre o modal.
  */
 export function ViewCalendario({ contexto, tarefas }: { contexto: ListaContexto; tarefas: Tarefa[] }) {
-  void contexto
-  const { abrirTarefa } = useTasks()
+  const { abrirTarefa, prefetchTarefa } = useTasks()
   const { executar, erro, setErro } = useAcao()
   const hoje = hojeISO()
   const [ano, setAno] = React.useState(Number(hoje.slice(0, 4)))
   const [mes, setMes] = React.useState(Number(hoje.slice(5, 7)))
   const [itens, setItens] = React.useState(tarefas)
   React.useEffect(() => setItens(tarefas), [tarefas])
+  useEventosDeTarefa(contexto.lista.id, setItens)
   const [arrastando, setArrastando] = React.useState<string | null>(null)
   const [sobre, setSobre] = React.useState<string | null>(null)
 
@@ -62,6 +62,7 @@ export function ViewCalendario({ contexto, tarefas }: { contexto: ListaContexto;
     setItens((atual) => atual.map((t) => (t.id === id ? { ...t, data_vencimento: dia } : t)))
     const salvo = await executar(() => atualizarTarefa(id, { data_vencimento: dia }))
     if (!salvo) setItens((atual) => atual.map((t) => (t.id === id ? original : t)))
+    else setItens((atual) => atual.map((t) => (t.id === id ? salvo.tarefa : t)))
   }
 
   return (
@@ -153,6 +154,7 @@ export function ViewCalendario({ contexto, tarefas }: { contexto: ListaContexto;
                           setSobre(null)
                         }}
                         onClick={() => abrirTarefa(t.id)}
+                        onMouseEnter={() => prefetchTarefa(t.id)}
                         className={cn(
                           'flex w-full items-center gap-1.5 rounded-md border border-border bg-background px-1.5 py-1 text-left text-[11px] leading-tight hover:border-input',
                           statusEncerra(t.status_tipo) && 'text-muted-foreground line-through',

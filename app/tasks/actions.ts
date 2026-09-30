@@ -6,12 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { getColaborador, type Colaborador } from '@/lib/auth'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
-import {
-  getEspacosVisiveis,
-  getStatuses,
-  getTarefa,
-  getTarefaDetalhe,
-} from '@/lib/tasks/data'
+import { getStatuses, getTarefa, getTarefaDetalhe } from '@/lib/tasks/data'
 import {
   podeAdministrarEspaco,
   podeApagarComentario,
@@ -38,6 +33,7 @@ import {
 } from '@/lib/tasks/schemas'
 import type {
   Anexo,
+  Atividade,
   Campo,
   Comentario,
   Espaco,
@@ -45,6 +41,7 @@ import type {
   Resultado,
   Status,
   Tarefa,
+  TarefaAtualizada,
   TarefaDetalhe,
 } from '@/lib/tasks/types'
 import { BUCKET_ANEXOS, PRIORIDADES } from '@/lib/tasks/types'
@@ -69,7 +66,13 @@ function sucesso<T>(data: T, message?: string): Resultado<T> {
   return { ok: true, data, message }
 }
 
-/** Revalida todas as telas do módulo: qualquer mudança aparece em todas. */
+/**
+ * Revalida as telas do módulo. Só nas ações de ESTRUTURA (espaços,
+ * pastas, listas, status, campos, exclusão e mudança de lista): a chamada
+ * faz o Next devolver a tela nova junto com a resposta. Nas ações
+ * frequentes (status, datas, comentários...) ela não entra: o navegador
+ * atualiza a própria cópia com o que a ação devolve.
+ */
 function revalidar() {
   revalidatePath('/tasks', 'layout')
 }
@@ -84,13 +87,31 @@ async function autenticar(): Promise<Contexto | { erro: string }> {
   return { colab, supabase }
 }
 
-/** O espaço, se a pessoa pode vê-lo. */
-async function espacoVisivel(
-  colab: Colaborador,
-  espacoId: string,
-): Promise<(Espaco & EspacoAcesso) | null> {
-  const espacos = await getEspacosVisiveis(colab)
-  return espacos.find((e) => e.id === espacoId) ?? null
+/**
+ * Espaço privado: só consulta a lista de membros quando precisa. Admin,
+ * dono e espaço público passam sem ir ao banco.
+ */
+async function podeVer(
+  ctx: Contexto,
+  espaco: { id: string; privado: boolean; criado_por: string | null },
+): Promise<boolean> {
+  if (!espaco.privado || ctx.colab.papel === 'admin' || espaco.criado_por === ctx.colab.email) return true
+  const { data } = await ctx.supabase
+    .from('tarefas_espaco_membros')
+    .select('email')
+    .eq('espaco_id', espaco.id)
+    .eq('email', ctx.colab.email)
+    .maybeSingle()
+  return Boolean(data)
+}
+
+/** O espaço, se a pessoa pode vê-lo. Uma consulta; duas se for privado. */
+async function espacoVisivel(ctx: Contexto, espacoId: string): Promise<(Espaco & EspacoAcesso) | null> {
+  const { data } = await ctx.supabase.from('tarefas_espacos').select('*').eq('id', espacoId).maybeSingle()
+  if (!data) return null
+  const espaco = data as Espaco
+  if (!(await podeVer(ctx, espaco))) return null
+  return { ...espaco, membros: espaco.privado ? [ctx.colab.email] : [] }
 }
 
 interface ListaBasica {
@@ -101,30 +122,50 @@ interface ListaBasica {
   criado_por: string | null
 }
 
-/** A lista e o espaço dela, se a pessoa pode vê-los. */
+/** A lista e o espaço dela numa consulta só, se a pessoa pode vê-los. */
 async function listaVisivel(
   ctx: Contexto,
   listaId: string,
 ): Promise<{ lista: ListaBasica; espaco: Espaco & EspacoAcesso } | null> {
   const { data } = await ctx.supabase
     .from('tarefas_listas')
-    .select('id, espaco_id, pasta_id, nome, criado_por')
+    .select('id, espaco_id, pasta_id, nome, criado_por, espaco:tarefas_espacos!inner(*)')
     .eq('id', listaId)
     .maybeSingle()
   if (!data) return null
 
-  const espaco = await espacoVisivel(ctx.colab, data.espaco_id)
-  if (!espaco) return null
+  const bruto = data as unknown as ListaBasica & { espaco: Espaco | Espaco[] }
+  const espaco = Array.isArray(bruto.espaco) ? bruto.espaco[0] : bruto.espaco
+  if (!espaco || !(await podeVer(ctx, espaco))) return null
 
-  return { lista: data as ListaBasica, espaco }
+  return {
+    lista: { id: bruto.id, espaco_id: bruto.espaco_id, pasta_id: bruto.pasta_id, nome: bruto.nome, criado_por: bruto.criado_por },
+    espaco: { ...espaco, membros: espaco.privado ? [ctx.colab.email] : [] },
+  }
 }
 
-/** A tarefa (da view), se a pessoa pode ver o espaço dela. */
+/** A tarefa (da view), se a pessoa pode ver o espaço dela. Espaço público não custa consulta extra. */
 async function tarefaVisivel(ctx: Contexto, tarefaId: string): Promise<Tarefa | null> {
   const tarefa = await getTarefa(tarefaId)
   if (!tarefa) return null
-  const espaco = await espacoVisivel(ctx.colab, tarefa.espaco_id)
+  if (!tarefa.espaco_privado || ctx.colab.papel === 'admin') return tarefa
+  const espaco = await espacoVisivel(ctx, tarefa.espaco_id)
   return espaco ? tarefa : null
+}
+
+/** Grava várias linhas de histórico de uma vez e devolve o que gravou. */
+async function registrarAtividades(
+  supabase: SupabaseClient,
+  tarefaId: string,
+  autor: string,
+  itens: { tipo: string; detalhe: Record<string, unknown> }[],
+): Promise<Atividade[]> {
+  if (itens.length === 0) return []
+  const { data } = await supabase
+    .from('tarefas_atividades')
+    .insert(itens.map((i) => ({ tarefa_id: tarefaId, autor, tipo: i.tipo, detalhe: i.detalhe })))
+    .select('*')
+  return (data ?? []) as Atividade[]
 }
 
 async function registrarAtividade(
@@ -134,7 +175,7 @@ async function registrarAtividade(
   tipo: string,
   detalhe: Record<string, unknown> = {},
 ) {
-  await supabase.from('tarefas_atividades').insert({ tarefa_id: tarefaId, autor, tipo, detalhe })
+  await registrarAtividades(supabase, tarefaId, autor, [{ tipo, detalhe }])
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +259,7 @@ export async function atualizarEspaco(input: unknown): Promise<Resultado> {
 
   const { id, nome, cor, privado, membros } = parsed.data
 
-  const espaco = await espacoVisivel(ctx.colab, id)
+  const espaco = await espacoVisivel(ctx, id)
   if (!espaco) return falha('Espaço não encontrado.')
   if (!podeAdministrarEspaco(ctx.colab, espaco)) {
     return falha('Só administradores ou quem criou o espaço podem alterá-lo.')
@@ -249,7 +290,7 @@ export async function excluirEspaco(input: unknown): Promise<Resultado> {
   const parsed = uuid.safeParse(input)
   if (!parsed.success) return falha('Identificador inválido.')
 
-  const espaco = await espacoVisivel(ctx.colab, parsed.data)
+  const espaco = await espacoVisivel(ctx, parsed.data)
   if (!espaco) return falha('Espaço não encontrado.')
   if (!podeAdministrarEspaco(ctx.colab, espaco)) {
     return falha('Só administradores ou quem criou o espaço podem excluí-lo.')
@@ -276,7 +317,7 @@ export async function criarPasta(input: unknown): Promise<Resultado<{ id: string
   const parsed = pastaSchema.safeParse(input)
   if (!parsed.success) return falha(primeiraMensagem(parsed.error))
 
-  const espaco = await espacoVisivel(ctx.colab, parsed.data.espaco_id)
+  const espaco = await espacoVisivel(ctx, parsed.data.espaco_id)
   if (!espaco) return falha('Espaço não encontrado.')
 
   const { data: maxRow } = await ctx.supabase
@@ -311,7 +352,7 @@ export async function renomearPasta(input: unknown): Promise<Resultado> {
   const parsed = pastaSchema.required({ id: true }).safeParse(input)
   if (!parsed.success) return falha(primeiraMensagem(parsed.error))
 
-  const espaco = await espacoVisivel(ctx.colab, parsed.data.espaco_id)
+  const espaco = await espacoVisivel(ctx, parsed.data.espaco_id)
   if (!espaco) return falha('Espaço não encontrado.')
 
   const { error } = await ctx.supabase
@@ -339,7 +380,7 @@ export async function excluirPasta(input: unknown): Promise<Resultado> {
     .maybeSingle()
   if (!pasta) return falha('Pasta não encontrada.')
 
-  const espaco = await espacoVisivel(ctx.colab, pasta.espaco_id)
+  const espaco = await espacoVisivel(ctx, pasta.espaco_id)
   if (!espaco) return falha('Pasta não encontrada.')
   if (!podeApagarItem(ctx.colab, pasta, espaco)) {
     return falha('Só administradores, quem criou a pasta ou o dono do espaço podem excluí-la.')
@@ -375,7 +416,7 @@ export async function criarLista(input: unknown): Promise<Resultado<{ id: string
 
   const { espaco_id, pasta_id, nome, cor, descricao } = parsed.data
 
-  const espaco = await espacoVisivel(ctx.colab, espaco_id)
+  const espaco = await espacoVisivel(ctx, espaco_id)
   if (!espaco) return falha('Espaço não encontrado.')
 
   const { data: maxRow } = await ctx.supabase
@@ -573,7 +614,7 @@ export async function salvarCampo(input: unknown): Promise<Resultado<Campo>> {
 
   const { id, espaco_id, lista_id, nome, tipo, opcoes } = parsed.data
 
-  const espaco = await espacoVisivel(ctx.colab, espaco_id)
+  const espaco = await espacoVisivel(ctx, espaco_id)
   if (!espaco) return falha('Espaço não encontrado.')
 
   if (lista_id) {
@@ -640,7 +681,7 @@ export async function excluirCampo(input: unknown): Promise<Resultado> {
     .maybeSingle()
   if (!campo) return falha('Campo não encontrado.')
 
-  const espaco = await espacoVisivel(ctx.colab, campo.espaco_id)
+  const espaco = await espacoVisivel(ctx, campo.espaco_id)
   if (!espaco) return falha('Campo não encontrado.')
 
   const { error } = await ctx.supabase.from('tarefas_campos').delete().eq('id', campo.id)
@@ -731,12 +772,22 @@ export async function criarTarefa(input: unknown): Promise<Resultado<Tarefa>> {
   const tarefa = await getTarefa(tarefaId)
   if (!tarefa) return falha('A tarefa foi criada, mas não pôde ser lida de volta.')
 
-  revalidar()
   return sucesso(tarefa, pai_id ? 'Subtarefa criada.' : 'Tarefa criada.')
 }
 
-/** Atualiza um ou mais campos e registra cada mudança no histórico. */
-export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): Promise<Resultado<Tarefa>> {
+function rotuloPrioridade(p: Tarefa['prioridade']): string | null {
+  return p ? PRIORIDADES[p].rotulo : null
+}
+
+/**
+ * Atualiza um ou mais campos e registra cada mudança no histórico.
+ *
+ * Poucas idas ao banco de propósito: lê a tarefa, grava, relê, anota o
+ * histórico. O status é validado pela própria chave composta da tabela
+ * (um status de outra lista é recusado pelo banco), e o histórico é
+ * escrito comparando o antes e o depois, numa inserção só.
+ */
+export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): Promise<Resultado<TarefaAtualizada>> {
   const ctx = await autenticar()
   if ('erro' in ctx) return falha(ctx.erro)
 
@@ -751,104 +802,49 @@ export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): P
 
   const patch = parsed.data
   const update: Record<string, unknown> = {}
-  const atividades: { tipo: string; detalhe: Record<string, unknown> }[] = []
 
-  if (patch.titulo !== undefined && patch.titulo !== atual.titulo) {
-    update.titulo = patch.titulo
-    atividades.push({ tipo: 'titulo', detalhe: { de: atual.titulo, para: patch.titulo } })
-  }
-
+  if (patch.titulo !== undefined && patch.titulo !== atual.titulo) update.titulo = patch.titulo
   if (patch.descricao !== undefined && (patch.descricao ?? '') !== (atual.descricao ?? '')) {
     update.descricao = patch.descricao?.trim() ? patch.descricao : null
-    atividades.push({ tipo: 'descricao', detalhe: {} })
   }
-
   if (patch.status_id !== undefined && patch.status_id !== atual.status_id) {
-    const statuses = await getStatuses(atual.lista_id)
-    const novo = statuses.find((s) => s.id === patch.status_id)
-    if (!novo) return falha('Este status não pertence à lista da tarefa.')
-    update.status_id = novo.id
+    update.status_id = patch.status_id
     // Vai para o fim da nova coluna do quadro.
-    update.posicao = await proximaPosicao(ctx.supabase, atual.lista_id, novo.id)
-    atividades.push({
-      tipo: 'status',
-      detalhe: { de: atual.status_nome, para: novo.nome, de_cor: atual.status_cor, para_cor: novo.cor },
-    })
+    update.posicao = await proximaPosicao(ctx.supabase, atual.lista_id, patch.status_id)
   }
-
-  if (patch.prioridade !== undefined && patch.prioridade !== atual.prioridade) {
-    update.prioridade = patch.prioridade
-    atividades.push({
-      tipo: 'prioridade',
-      detalhe: {
-        de: atual.prioridade ? PRIORIDADES[atual.prioridade].rotulo : null,
-        para: patch.prioridade ? PRIORIDADES[patch.prioridade as keyof typeof PRIORIDADES].rotulo : null,
-      },
-    })
-  }
-
-  if (patch.data_inicio !== undefined && patch.data_inicio !== atual.data_inicio) {
-    update.data_inicio = patch.data_inicio
-    atividades.push({ tipo: 'data_inicio', detalhe: { de: atual.data_inicio, para: patch.data_inicio } })
-  }
-
+  if (patch.prioridade !== undefined && patch.prioridade !== atual.prioridade) update.prioridade = patch.prioridade
+  if (patch.data_inicio !== undefined && patch.data_inicio !== atual.data_inicio) update.data_inicio = patch.data_inicio
   if (patch.data_vencimento !== undefined && patch.data_vencimento !== atual.data_vencimento) {
     update.data_vencimento = patch.data_vencimento
-    atividades.push({
-      tipo: 'data_vencimento',
-      detalhe: { de: atual.data_vencimento, para: patch.data_vencimento },
-    })
   }
-
   if (patch.estimativa_minutos !== undefined && patch.estimativa_minutos !== atual.estimativa_minutos) {
     update.estimativa_minutos = patch.estimativa_minutos
-    atividades.push({
-      tipo: 'estimativa',
-      detalhe: { de: atual.estimativa_minutos, para: patch.estimativa_minutos },
-    })
   }
-
   if (patch.etiquetas !== undefined) {
     const antes = [...atual.etiquetas].sort().join('|')
     const depois = [...patch.etiquetas].sort().join('|')
-    if (antes !== depois) {
-      update.etiquetas = patch.etiquetas
-      atividades.push({ tipo: 'etiquetas', detalhe: { de: atual.etiquetas, para: patch.etiquetas } })
-    }
+    if (antes !== depois) update.etiquetas = patch.etiquetas
   }
-
   if (patch.campo !== undefined) {
     const campos = { ...atual.campos }
-    if (patch.campo.valor === null || patch.campo.valor === '' ||
-        (Array.isArray(patch.campo.valor) && patch.campo.valor.length === 0)) {
-      delete campos[patch.campo.id]
-    } else {
-      campos[patch.campo.id] = patch.campo.valor
-    }
+    const v = patch.campo.valor
+    if (v === null || v === '' || (Array.isArray(v) && v.length === 0)) delete campos[patch.campo.id]
+    else campos[patch.campo.id] = v
     update.campos = campos
-    atividades.push({
-      tipo: 'campo',
-      detalhe: { campo_id: patch.campo.id, de: atual.campos[patch.campo.id] ?? null, para: patch.campo.valor },
-    })
   }
 
-  if (Object.keys(update).length > 0) {
-    const { error } = await ctx.supabase.from('tarefas').update(update).eq('id', atual.id)
-    if (error) return falha(`Erro ao salvar: ${error.message}`)
-  }
-
+  // Responsáveis vivem em outra tabela: ajusta primeiro, e a atualização
+  // da tarefa logo abaixo já carimba o updated_at.
+  let entram: string[] = []
+  let saem: string[] = []
   if (patch.responsaveis !== undefined) {
     const antes = new Set(atual.responsaveis)
     const depois = new Set(patch.responsaveis)
-    const entram = patch.responsaveis.filter((e) => !antes.has(e))
-    const saem = atual.responsaveis.filter((e) => !depois.has(e))
+    entram = patch.responsaveis.filter((e) => !antes.has(e))
+    saem = atual.responsaveis.filter((e) => !depois.has(e))
 
     if (saem.length > 0) {
-      await ctx.supabase
-        .from('tarefas_responsaveis')
-        .delete()
-        .eq('tarefa_id', atual.id)
-        .in('email', saem)
+      await ctx.supabase.from('tarefas_responsaveis').delete().eq('tarefa_id', atual.id).in('email', saem)
     }
     if (entram.length > 0) {
       const { error } = await ctx.supabase
@@ -856,26 +852,54 @@ export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): P
         .insert(entram.map((email) => ({ tarefa_id: atual.id, email })))
       if (error) return falha(`Erro ao salvar responsáveis: ${error.message}`)
     }
-    if (entram.length > 0 || saem.length > 0) {
-      atividades.push({ tipo: 'responsaveis', detalhe: { entram, saem } })
-      // O updated_at só muda por trigger em UPDATE na própria tabela.
-      await ctx.supabase.from('tarefas').update({ updated_at: new Date().toISOString() }).eq('id', atual.id)
+    if ((entram.length > 0 || saem.length > 0) && Object.keys(update).length === 0) {
+      update.updated_at = new Date().toISOString()
     }
   }
 
-  for (const a of atividades) {
-    await registrarAtividade(ctx.supabase, atual.id, ctx.colab.email, a.tipo, a.detalhe)
+  if (Object.keys(update).length > 0) {
+    const { error } = await ctx.supabase.from('tarefas').update(update).eq('id', atual.id)
+    if (error) {
+      if (error.code === '23503') return falha('Este status não pertence à lista da tarefa.')
+      return falha(`Erro ao salvar: ${error.message}`)
+    }
   }
 
   const tarefa = await getTarefa(atual.id)
   if (!tarefa) return falha('A tarefa foi salva, mas não pôde ser lida de volta.')
 
-  revalidar()
-  return sucesso(tarefa)
+  const itens: { tipo: string; detalhe: Record<string, unknown> }[] = []
+  if (update.titulo !== undefined) itens.push({ tipo: 'titulo', detalhe: { de: atual.titulo, para: tarefa.titulo } })
+  if (update.descricao !== undefined) itens.push({ tipo: 'descricao', detalhe: {} })
+  if (update.status_id !== undefined) {
+    itens.push({
+      tipo: 'status',
+      detalhe: { de: atual.status_nome, para: tarefa.status_nome, de_cor: atual.status_cor, para_cor: tarefa.status_cor },
+    })
+  }
+  if (update.prioridade !== undefined) {
+    itens.push({ tipo: 'prioridade', detalhe: { de: rotuloPrioridade(atual.prioridade), para: rotuloPrioridade(tarefa.prioridade) } })
+  }
+  if (update.data_inicio !== undefined) itens.push({ tipo: 'data_inicio', detalhe: { de: atual.data_inicio, para: tarefa.data_inicio } })
+  if (update.data_vencimento !== undefined) {
+    itens.push({ tipo: 'data_vencimento', detalhe: { de: atual.data_vencimento, para: tarefa.data_vencimento } })
+  }
+  if (update.estimativa_minutos !== undefined) {
+    itens.push({ tipo: 'estimativa', detalhe: { de: atual.estimativa_minutos, para: tarefa.estimativa_minutos } })
+  }
+  if (update.etiquetas !== undefined) itens.push({ tipo: 'etiquetas', detalhe: { de: atual.etiquetas, para: tarefa.etiquetas } })
+  if (update.campos !== undefined && patch.campo) {
+    itens.push({ tipo: 'campo', detalhe: { campo_id: patch.campo.id, de: atual.campos[patch.campo.id] ?? null, para: patch.campo.valor } })
+  }
+  if (entram.length > 0 || saem.length > 0) itens.push({ tipo: 'responsaveis', detalhe: { entram, saem } })
+
+  const atividades = await registrarAtividades(ctx.supabase, atual.id, ctx.colab.email, itens)
+
+  return sucesso({ tarefa, atividades })
 }
 
 /** Arrastar no quadro: muda o status e/ou a posição na coluna. */
-export async function moverTarefa(input: unknown): Promise<Resultado<Tarefa>> {
+export async function moverTarefa(input: unknown): Promise<Resultado<TarefaAtualizada>> {
   const ctx = await autenticar()
   if ('erro' in ctx) return falha(ctx.erro)
 
@@ -885,33 +909,32 @@ export async function moverTarefa(input: unknown): Promise<Resultado<Tarefa>> {
   const atual = await tarefaVisivel(ctx, parsed.data.tarefa_id)
   if (!atual) return falha('Tarefa não encontrada.')
 
-  const statuses = await getStatuses(atual.lista_id)
-  const novo = statuses.find((s) => s.id === parsed.data.status_id)
-  if (!novo) return falha('Este status não pertence à lista da tarefa.')
-
   const posicao =
-    parsed.data.posicao ?? (await proximaPosicao(ctx.supabase, atual.lista_id, novo.id))
+    parsed.data.posicao ?? (await proximaPosicao(ctx.supabase, atual.lista_id, parsed.data.status_id))
 
   const { error } = await ctx.supabase
     .from('tarefas')
-    .update({ status_id: novo.id, posicao })
+    .update({ status_id: parsed.data.status_id, posicao })
     .eq('id', atual.id)
-  if (error) return falha(`Erro ao mover: ${error.message}`)
-
-  if (novo.id !== atual.status_id) {
-    await registrarAtividade(ctx.supabase, atual.id, ctx.colab.email, 'status', {
-      de: atual.status_nome,
-      para: novo.nome,
-      de_cor: atual.status_cor,
-      para_cor: novo.cor,
-    })
+  if (error) {
+    if (error.code === '23503') return falha('Este status não pertence à lista da tarefa.')
+    return falha(`Erro ao mover: ${error.message}`)
   }
 
   const tarefa = await getTarefa(atual.id)
   if (!tarefa) return falha('A tarefa foi movida, mas não pôde ser lida de volta.')
 
-  revalidar()
-  return sucesso(tarefa)
+  const atividades =
+    tarefa.status_id !== atual.status_id
+      ? await registrarAtividades(ctx.supabase, atual.id, ctx.colab.email, [
+          {
+            tipo: 'status',
+            detalhe: { de: atual.status_nome, para: tarefa.status_nome, de_cor: atual.status_cor, para_cor: tarefa.status_cor },
+          },
+        ])
+      : []
+
+  return sucesso({ tarefa, atividades })
 }
 
 /** Leva a tarefa (e as subtarefas) para outra lista, mapeando o status pelo nome. */
@@ -1012,7 +1035,6 @@ export async function duplicarTarefa(input: unknown): Promise<Resultado<Tarefa>>
   const tarefa = await getTarefa(novoId)
   if (!tarefa) return falha('A cópia foi criada, mas não pôde ser lida de volta.')
 
-  revalidar()
   return sucesso(tarefa, 'Tarefa duplicada.')
 }
 
@@ -1091,7 +1113,6 @@ export async function adicionarItemChecklist(input: unknown): Promise<Resultado<
     .single()
   if (error || !data) return falha(`Erro ao adicionar: ${error?.message ?? 'sem retorno'}`)
 
-  revalidar()
   return sucesso(data as ItemChecklist)
 }
 
@@ -1113,7 +1134,6 @@ export async function alternarItemChecklist(itemId: unknown, feito: unknown): Pr
     .single()
   if (error || !data) return falha(`Erro ao salvar: ${error?.message ?? 'sem retorno'}`)
 
-  revalidar()
   return sucesso(data as ItemChecklist)
 }
 
@@ -1130,7 +1150,6 @@ export async function excluirItemChecklist(itemId: unknown): Promise<Resultado> 
   const { error } = await ctx.supabase.from('tarefas_checklist').delete().eq('id', item.id)
   if (error) return falha(`Erro ao excluir: ${error.message}`)
 
-  revalidar()
   return sucesso(null)
 }
 
@@ -1157,7 +1176,6 @@ export async function comentar(input: unknown): Promise<Resultado<Comentario>> {
 
   await ctx.supabase.from('tarefas').update({ updated_at: new Date().toISOString() }).eq('id', tarefa.id)
 
-  revalidar()
   return sucesso(data as Comentario)
 }
 
@@ -1185,7 +1203,6 @@ export async function editarComentario(comentarioId: unknown, texto: unknown): P
     .single()
   if (error || !data) return falha(`Erro ao salvar: ${error?.message ?? 'sem retorno'}`)
 
-  revalidar()
   return sucesso(data as Comentario)
 }
 
@@ -1212,7 +1229,6 @@ export async function excluirComentario(comentarioId: unknown): Promise<Resultad
   const { error } = await ctx.supabase.from('tarefas_comentarios').delete().eq('id', atual.id)
   if (error) return falha(`Erro ao excluir: ${error.message}`)
 
-  revalidar()
   return sucesso(null)
 }
 
@@ -1292,7 +1308,6 @@ export async function registrarAnexo(input: unknown): Promise<Resultado<Anexo>> 
   await registrarAtividade(ctx.supabase, tarefa.id, ctx.colab.email, 'anexo', { nome })
   await ctx.supabase.from('tarefas').update({ updated_at: new Date().toISOString() }).eq('id', tarefa.id)
 
-  revalidar()
   return sucesso({ ...(data as Omit<Anexo, 'url'>), url: assinada.signedUrl })
 }
 
@@ -1322,6 +1337,5 @@ export async function excluirAnexo(anexoId: unknown): Promise<Resultado> {
     nome: anexo.nome,
   })
 
-  revalidar()
   return sucesso(null)
 }

@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 
 import { getSupabaseAdminClient, getSupabaseServerClient } from '@/lib/supabase/server'
@@ -18,6 +19,10 @@ import { getSupabaseAdminClient, getSupabaseServerClient } from '@/lib/supabase/
  * cookie: desativar alguém corta o acesso na hora, sem esperar a sessão
  * expirar. E o banco repete a checagem por conta própria via RLS — se
  * esta camada falhar, as consultas ainda voltam vazias.
+ *
+ * `cache()` do React memoriza a resposta DENTRO de uma mesma requisição:
+ * cabeçalho, layout e página perguntam "quem é?" e só a primeira vai ao
+ * Supabase; as outras reaproveitam. Na requisição seguinte, tudo de novo.
  */
 
 export interface Colaborador {
@@ -27,7 +32,7 @@ export interface Colaborador {
 }
 
 /** E-mail confirmado pelo Supabase, ou null. */
-export async function getEmailLogado(): Promise<string | null> {
+export const getEmailLogado = cache(async (): Promise<string | null> => {
   const supabase = await getSupabaseServerClient()
   if (!supabase) return null
 
@@ -38,22 +43,22 @@ export async function getEmailLogado(): Promise<string | null> {
   if (error || !data.user?.email) return null
 
   return data.user.email.toLowerCase()
-}
+})
 
 /** Busca o colaborador na lista. Null = logado mas sem autorização. */
-export async function getColaborador(): Promise<Colaborador | null> {
+export const getColaborador = cache(async (): Promise<Colaborador | null> => {
   const email = await getEmailLogado()
   if (!email) return null
 
   return buscarColaborador(email)
-}
+})
 
 /**
  * Consulta a lista pelo e-mail. Usa service_role porque a tabela de
  * permissões não é legível por quem está sendo verificado — quem pergunta
  * "posso entrar?" não pode ler a lista de quem pode.
  */
-export async function buscarColaborador(email: string): Promise<Colaborador | null> {
+export const buscarColaborador = cache(async (email: string): Promise<Colaborador | null> => {
   const supabase = getSupabaseAdminClient()
   if (!supabase) return null
 
@@ -70,7 +75,7 @@ export async function buscarColaborador(email: string): Promise<Colaborador | nu
     nome: (data.nome as string | null) ?? null,
     papel: data.papel === 'admin' ? 'admin' : 'colaborador',
   }
-}
+})
 
 /** Exige colaborador ativo. Redireciona quando não é. */
 export async function requireColaborador(): Promise<Colaborador> {

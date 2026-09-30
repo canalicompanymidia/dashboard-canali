@@ -261,6 +261,18 @@ export function statusEncerra(tipo: StatusTipo): boolean {
 /** Bucket privado dos anexos. O navegador só o alcança por URLs assinadas. */
 export const BUCKET_ANEXOS = 'tarefas-anexos'
 
+/** O que uma ação de edição devolve: a tarefa nova e as linhas de histórico que gerou. */
+export interface TarefaAtualizada {
+  tarefa: Tarefa
+  atividades: Atividade[]
+}
+
+/** Aviso entre telas abertas: o modal mudou algo e a lista atrás precisa saber. */
+export type EventoTarefa =
+  | { tipo: 'atualizada'; tarefa: Tarefa }
+  | { tipo: 'criada'; tarefa: Tarefa }
+  | { tipo: 'removida'; id: string }
+
 /** Retorno das Server Actions do módulo: dados quando deu certo, mensagem quando não. */
 export type Resultado<T = null> =
   | { ok: true; data: T; message?: string }
