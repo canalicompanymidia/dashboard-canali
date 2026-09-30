@@ -88,6 +88,7 @@ aplique só as migrations que faltam, em ordem, de `supabase/migrations/`:
 | `0005_bloqueio_da_senha_mestre.sql` | Bloqueio por tentativas na Senha Mestre |
 | `0006_tasks.sql` | Módulo Tasks: espaços, listas, tarefas, anexos (bucket privado) e a estrutura inicial |
 | `0007_clickup_ids.sql` | Ids de origem para importar do ClickUp sem duplicar |
+| `0008_tasks_produtividade.sql` | Tasks: visualização padrão, reunião e links na tarefa, agenda assinável, Google Calendar, presença |
 
 > **Ordem obrigatória da 0004.** Rode a `0004a`, publique o código com a tela
 > de login, entre no Hub e confirme que funciona — só então rode a `0004b`.
@@ -575,6 +576,58 @@ Regras:
 - Espaço, pasta, lista e campo são casados primeiro pelo id do ClickUp,
   depois pelo nome; a estrutura semeada pela `0006` já vem amarrada aos
   ids reais.
+
+### Produtividade: quadro, reuniões, agenda, presença e clipes
+
+Migration `0008_tasks_produtividade.sql`.
+
+- **Quadro como padrão.** Uma lista abre, nesta ordem: na aba pedida na
+  URL; na última aba que a própria pessoa usou nela (cookie `tasks_views`,
+  só deste navegador); no padrão da lista; no padrão do espaço; e, sem
+  nada disso, em **Quadro**. Os padrões ficam em "Configurar espaço" e
+  "Editar lista"; o menu ⋯ da lista tem "Abrir sempre em …".
+- **Quadro por responsável, prioridade ou vencimento** ("Agrupar por").
+  Arrastar entre colunas troca o responsável (sai quem era, entra o da
+  coluna; "Sem responsável" limpa), a prioridade ou o vencimento (Hoje,
+  Amanhã, Esta semana = último dia útil, Próxima semana = segunda). Tarefa
+  com duas pessoas aparece nas duas colunas. A escolha fica no navegador,
+  por lista.
+- **Reunião e links na tarefa** (nível 1 das integrações, sem OAuth). O
+  campo Reunião aceita Meet, Zoom, Teams ou qualquer sala e mostra
+  "Entrar"; "Criar Meet" abre `meet.google.com/new` para colar o endereço.
+  A seção Links reconhece Drive, Docs, Planilhas, Apresentações,
+  Formulários, Figma, Canva, Notion, YouTube, Instagram, WhatsApp e
+  ClickUp e desenha um cartão por link (máx. 30 por tarefa). Só `http(s)`
+  entra; a validação vale no servidor.
+- **Agenda assinável.** `/tasks/preferencias` gera um endereço
+  `/api/tasks/agenda/<token>.ics` por pessoa, que Google Calendar, Apple e
+  Outlook assinam. Sai um evento de dia inteiro por tarefa dela com
+  vencimento (abertas, e concluídas até 30 dias). A rota é pública por
+  desenho — programas de agenda não fazem login — e o que autentica é o
+  token (24 bytes aleatórios, único, renovável; o antigo morre na hora).
+  Só título, lista, status e data saem; nunca descrição, anexos ou
+  comentários. A pessoa precisa estar ativa em `colaboradores_autorizados`.
+- **Google Calendar, somente leitura.** A pessoa cola o "Endereço secreto
+  no formato iCal" do Google. Ele é guardado **cifrado** com
+  `VAULT_ENCRYPTION_KEY` (`tarefas_preferencias.google_ics_cifrado`),
+  só o servidor o lê, só `https://calendar.google.com/calendar/ical/…ics`
+  é aceito, e o arquivo fica 5 minutos em memória por pessoa. A Agenda do
+  Início mostra as reuniões do dia com "Entrar" (Meet/Zoom extraídos do
+  evento). Recorrências e exceções são expandidas com `ical.js`. Ninguém
+  além da própria pessoa vê esses eventos.
+- **Quem está online.** Presença do Realtime no canal privado
+  `tasks:presenca`; as policies em `realtime.messages` só deixam entrar
+  colaborador ativo (`eh_colaborador()`). Passa só o e-mail. Bolinha
+  verde nos avatares e "Online agora" no pé da barra lateral. Se o canal
+  falhar, nada quebra.
+- **Clipes de tela e voz.** Gravados no navegador (`MediaRecorder`), até
+  5 minutos (~40 MB), e enviados pelo mesmo fluxo de anexos (URL assinada,
+  bucket privado). Vídeo e áudio tocam dentro da tarefa. Navegador sem
+  suporte (Safari no iPhone, por exemplo) simplesmente não mostra os
+  botões.
+- **Exclusão do que está aberto.** Excluir pela barra lateral a lista,
+  pasta ou espaço que está na tela leva a pessoa para o nível de cima;
+  `app/tasks/not-found.tsx` cobre o resto.
 
 ---
 

@@ -1,15 +1,15 @@
+import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 
-import { ListaHeader, type VisualizacaoLista } from '@/components/tasks/lista-header'
+import { ListaHeader } from '@/components/tasks/lista-header'
 import { ViewCalendario } from '@/components/tasks/view-calendario'
 import { ViewLista } from '@/components/tasks/view-lista'
 import { ViewQuadro } from '@/components/tasks/view-quadro'
 import { requireColaborador } from '@/lib/auth'
 import { getListaContexto, getTarefasDaLista } from '@/lib/tasks/data'
+import { COOKIE_VIEWS, lerViewsLembradas, resolverVisualizacao } from '@/lib/tasks/visualizacao'
 
 export const dynamic = 'force-dynamic'
-
-const VIEWS: VisualizacaoLista[] = ['lista', 'quadro', 'calendario']
 
 export default async function ListaPage({
   params,
@@ -19,13 +19,21 @@ export default async function ListaPage({
   searchParams: Promise<{ view?: string }>
 }) {
   const colab = await requireColaborador()
-  const [{ id }, { view }] = await Promise.all([params, searchParams])
+  const [{ id }, { view }, jar] = await Promise.all([params, searchParams, cookies()])
 
   const contexto = await getListaContexto(id, colab)
   if (!contexto) notFound()
 
   const tarefas = await getTarefasDaLista(contexto.lista.id)
-  const atual: VisualizacaoLista = VIEWS.includes(view as VisualizacaoLista) ? (view as VisualizacaoLista) : 'lista'
+
+  // ?view → a última aba desta pessoa nesta lista → padrão da lista →
+  // padrão do espaço → Quadro.
+  const atual = resolverVisualizacao({
+    param: view,
+    lembrada: lerViewsLembradas(jar.get(COOKIE_VIEWS)?.value)[contexto.lista.id],
+    lista: contexto.lista.visualizacao_padrao,
+    espaco: contexto.espaco.visualizacao_padrao,
+  })
 
   return (
     <>

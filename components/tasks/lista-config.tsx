@@ -22,6 +22,7 @@ import {
   STATUS_TIPOS,
   STATUS_TIPOS_ORDEM,
   TIPOS_CAMPO,
+  VISUALIZACOES,
   type Campo,
   type ListaContexto,
   type OpcaoCampo,
@@ -440,6 +441,14 @@ function DadosDaLista({ contexto, onFechar }: { contexto: ListaContexto; onFecha
         <dd>{contexto.espaco.nome}{contexto.pasta ? ` / ${contexto.pasta.nome}` : ''}</dd>
         <dt className="text-muted-foreground">Descrição</dt>
         <dd className="whitespace-pre-wrap">{contexto.lista.descricao || '—'}</dd>
+        <dt className="text-muted-foreground">Abre em</dt>
+        <dd>
+          {contexto.lista.visualizacao_padrao
+            ? VISUALIZACOES[contexto.lista.visualizacao_padrao]
+            : contexto.espaco.visualizacao_padrao
+              ? `${VISUALIZACOES[contexto.espaco.visualizacao_padrao]} (padrão do espaço)`
+              : 'Quadro (padrão do Tasks)'}
+        </dd>
         <dt className="text-muted-foreground">Tarefas</dt>
         <dd>
           {contexto.lista.tarefas_total} no total · {contexto.lista.tarefas_concluidas} concluídas · {contexto.lista.tarefas_atrasadas} atrasadas
@@ -448,7 +457,7 @@ function DadosDaLista({ contexto, onFechar }: { contexto: ListaContexto; onFecha
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={() => setEditando(true)}>
           <Pencil className="size-3.5" />
-          Editar nome, cor e descrição
+          Editar nome, cor, visualização e descrição
         </Button>
         {podeExcluir ? (
           <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => setExcluindo(true)}>

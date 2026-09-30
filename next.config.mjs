@@ -44,8 +44,10 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
+            // Microfone e captura de tela só para o próprio Hub (clipes de
+            // voz e de tela do Tasks); câmera e localização continuam fechadas.
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+            value: 'camera=(), microphone=(self), display-capture=(self), geolocation=(), interest-cohort=()',
           },
           // Área interna não entra em buscador. Com login isso já seria
           // improvável, mas o custo de garantir é zero.

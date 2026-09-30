@@ -10,6 +10,17 @@ export type StatusTipo = 'aberto' | 'ativo' | 'concluido' | 'fechado'
 
 export type Prioridade = 'urgente' | 'alta' | 'normal' | 'baixa'
 
+export type Visualizacao = 'lista' | 'quadro' | 'calendario'
+
+/** Padrão geral do Tasks quando espaço e lista não dizem nada. */
+export const VISUALIZACAO_PADRAO_GERAL: Visualizacao = 'quadro'
+
+export const VISUALIZACOES: Record<Visualizacao, string> = {
+  lista: 'Lista',
+  quadro: 'Quadro',
+  calendario: 'Calendário',
+}
+
 export type TipoCampo =
   | 'texto'
   | 'numero'
@@ -25,6 +36,8 @@ export interface Espaco {
   nome: string
   cor: string
   privado: boolean
+  /** Visualização com que as listas abrem. null = padrão geral (quadro). */
+  visualizacao_padrao: Visualizacao | null
   posicao: number
   criado_por: string | null
   created_at: string
@@ -47,6 +60,8 @@ export interface Lista {
   nome: string
   cor: string | null
   descricao: string | null
+  /** Visualização com que a lista abre. null = herda do espaço. */
+  visualizacao_padrao: Visualizacao | null
   posicao: number
   criado_por: string | null
   tarefas_total: number
@@ -114,6 +129,10 @@ export interface Tarefa {
   concluida_em: string | null
   created_at: string
   updated_at: string
+  /** Sala da reunião ligada à tarefa (Meet, Zoom, Teams...). */
+  reuniao_url: string | null
+  /** Links úteis: Drive, Docs, Figma... */
+  links: { url: string; titulo: string }[]
   status_nome: string
   status_cor: string
   status_tipo: StatusTipo
@@ -173,6 +192,14 @@ export interface Anexo {
   created_at: string
   /** URL assinada, válida por pouco tempo. null quando o storage falhou. */
   url: string | null
+}
+
+/** Preferências de uma pessoa no Tasks. */
+export interface PreferenciasTasks {
+  /** Endereço completo da agenda assinável, ou null se ainda não gerado. */
+  agenda_url: string | null
+  /** A pessoa já colou o endereço iCal do Google Calendar dela? */
+  google_calendar_conectado: boolean
 }
 
 /** Colaborador do Hub, como aparece nos seletores de responsável. */

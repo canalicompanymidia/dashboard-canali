@@ -25,6 +25,9 @@ const PUBLICAS = [
   // vendas da Hotmart e a sincronização do Meta Ads.
   '/api/webhooks',
   '/api/integrations',
+  // Agenda assinável: programas de calendário não fazem login; o que
+  // autentica é o token secreto que faz parte do endereço.
+  '/api/tasks/agenda',
 ]
 
 function ehPublica(pathname: string): boolean {

@@ -11,6 +11,8 @@ export interface PatchLocal {
   estimativa_minutos?: number | null
   etiquetas?: string[]
   responsaveis?: string[]
+  reuniao_url?: string | null
+  links?: { url: string; titulo: string }[]
   campo?: { id: string; valor: ValorCampo }
 }
 
@@ -31,6 +33,8 @@ export function aplicarPatchLocal(tarefa: Tarefa, patch: PatchLocal, statuses: S
   if (patch.estimativa_minutos !== undefined) nova.estimativa_minutos = patch.estimativa_minutos
   if (patch.etiquetas !== undefined) nova.etiquetas = patch.etiquetas
   if (patch.responsaveis !== undefined) nova.responsaveis = patch.responsaveis
+  if (patch.reuniao_url !== undefined) nova.reuniao_url = patch.reuniao_url
+  if (patch.links !== undefined) nova.links = patch.links
 
   if (patch.status_id !== undefined) {
     const s = statuses.find((x) => x.id === patch.status_id)

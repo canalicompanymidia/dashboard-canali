@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { CornerDownRight, ListChecks, MessageSquare, Paperclip } from 'lucide-react'
+import { CornerDownRight, Link2, ListChecks, MessageSquare, Paperclip, Video } from 'lucide-react'
 
 import { Avatares, DataChip, PrioridadeFlag, StatusDot } from '@/components/tasks/pecas'
 import { useTasks } from '@/components/tasks/provider'
@@ -90,6 +90,21 @@ export function Indicadores({ tarefa, className }: { tarefa: Tarefa; className?:
       <span key="anx" className="inline-flex items-center gap-0.5" title="Anexos">
         <Paperclip className="size-3" />
         {tarefa.anexos_total}
+      </span>,
+    )
+  }
+  if (tarefa.reuniao_url) {
+    itens.push(
+      <span key="reu" className="inline-flex items-center gap-0.5 text-positive" title="Tem reunião marcada">
+        <Video className="size-3" />
+      </span>,
+    )
+  }
+  if ((tarefa.links?.length ?? 0) > 0) {
+    itens.push(
+      <span key="lnk" className="inline-flex items-center gap-0.5" title="Links">
+        <Link2 className="size-3" />
+        {tarefa.links.length}
       </span>,
     )
   }

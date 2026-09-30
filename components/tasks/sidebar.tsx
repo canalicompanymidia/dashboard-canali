@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   ChevronRight,
   FolderOpen,
@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Settings2,
+  SlidersHorizontal,
   Trash2,
   UserRound,
   X,
@@ -22,7 +23,8 @@ import {
 
 import { excluirEspaco, excluirLista, excluirPasta } from '@/app/tasks/actions'
 import { ConfirmarExclusao, EspacoDialog, ListaDialog, PastaDialog } from '@/components/tasks/dialogs'
-import { MarcaEspaco } from '@/components/tasks/pecas'
+import { Avatar, MarcaEspaco } from '@/components/tasks/pecas'
+import { useOnlineTodos } from '@/components/tasks/presenca'
 import { useTasks } from '@/components/tasks/provider'
 import { Button } from '@/components/ui/button'
 import {
@@ -95,8 +97,33 @@ export function TasksSidebar() {
   )
 }
 
+/**
+ * Para onde ir depois de excluir algo que está aberto na tela. Sem isto
+ * a rota atual re-renderiza como "não encontrado" e a pessoa fica presa
+ * numa página que não existe mais.
+ */
+function destinoAposExcluir(pathname: string, alvo: Dialogo): string | null {
+  if (alvo.tipo === 'excluir-lista') {
+    return pathname === `/tasks/l/${alvo.lista.id}` ? `/tasks/e/${alvo.lista.espaco_id}` : null
+  }
+  if (alvo.tipo === 'excluir-pasta') {
+    const dentro = pathname === `/tasks/p/${alvo.pasta.id}` || alvo.pasta.listas.some((l) => pathname === `/tasks/l/${l.id}`)
+    return dentro ? `/tasks/e/${alvo.pasta.espaco_id}` : null
+  }
+  if (alvo.tipo === 'excluir-espaco') {
+    const e = alvo.espaco
+    const dentro =
+      pathname === `/tasks/e/${e.id}` ||
+      e.listas.some((l) => pathname === `/tasks/l/${l.id}`) ||
+      e.pastas.some((p) => pathname === `/tasks/p/${p.id}` || p.listas.some((l) => pathname === `/tasks/l/${l.id}`))
+    return dentro ? '/tasks' : null
+  }
+  return null
+}
+
 function Conteudo() {
   const pathname = usePathname()
+  const router = useRouter()
   const { arvore, colab } = useTasks()
   const [dialogo, setDialogo] = React.useState<Dialogo | null>(null)
   const [fechados, setFechados] = React.useState<Set<string>>(new Set())
@@ -104,6 +131,12 @@ function Conteudo() {
   React.useEffect(() => {
     setFechados(lerFechados())
   }, [])
+
+  /** Depois de excluir: sai da tela do item apagado, se era ela que estava aberta. */
+  function aoExcluir(alvo: Dialogo) {
+    const destino = destinoAposExcluir(pathname, alvo)
+    if (destino) router.push(destino)
+  }
 
   function alternar(id: string) {
     setFechados((atual) => {
@@ -186,6 +219,13 @@ function Conteudo() {
         </button>
       </div>
 
+      <footer className="shrink-0 space-y-1 border-t border-border px-2 py-2">
+        <OnlineAgora />
+        <ItemNav href="/tasks/preferencias" icone={SlidersHorizontal} ativo={pathname.startsWith('/tasks/preferencias')}>
+          Preferências
+        </ItemNav>
+      </footer>
+
       {/* Diálogos, um de cada vez. */}
       <EspacoDialog
         aberto={dialogo?.tipo === 'espaco'}
@@ -216,6 +256,7 @@ function Conteudo() {
             </>
           }
           onConfirmar={() => excluirEspaco(dialogo.espaco.id)}
+          aoConcluir={() => aoExcluir(dialogo)}
         />
       ) : null}
       {dialogo?.tipo === 'excluir-pasta' ? (
@@ -230,6 +271,7 @@ function Conteudo() {
             </>
           }
           onConfirmar={() => excluirPasta(dialogo.pasta.id)}
+          aoConcluir={() => aoExcluir(dialogo)}
         />
       ) : null}
       {dialogo?.tipo === 'excluir-lista' ? (
@@ -244,8 +286,37 @@ function Conteudo() {
             </>
           }
           onConfirmar={() => excluirLista(dialogo.lista.id)}
+          aoConcluir={() => aoExcluir(dialogo)}
         />
       ) : null}
+    </div>
+  )
+}
+
+/** Quem está com o Tasks aberto agora (presença do Realtime). */
+function OnlineAgora() {
+  const { pessoas, colab } = useTasks()
+  const online = useOnlineTodos()
+  const outros = pessoas.filter((p) => p.email !== colab.email && online.has(p.email))
+
+  return (
+    <div className="px-2 py-1" title={outros.length ? outros.map((p) => p.nome || p.email).join(', ') : 'Só você está no Tasks agora'}>
+      <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+        <span className="size-1.5 rounded-full bg-positive" aria-hidden />
+        Online agora · {outros.length + 1}
+      </p>
+      {outros.length > 0 ? (
+        <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Pessoas online">
+          {outros.slice(0, 8).map((p) => (
+            <li key={p.email}>
+              <Avatar email={p.email} tamanho="sm" />
+            </li>
+          ))}
+          {outros.length > 8 ? <li className="self-center text-[11px] text-muted-foreground">+{outros.length - 8}</li> : null}
+        </ul>
+      ) : (
+        <p className="mt-0.5 text-[11px] text-muted-foreground/70">Só você, por enquanto.</p>
+      )}
     </div>
   )
 }

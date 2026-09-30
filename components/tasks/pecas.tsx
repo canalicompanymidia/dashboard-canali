@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { Check, Flag, type LucideIcon } from 'lucide-react'
 
+import { useOnline } from '@/components/tasks/presenca'
 import { useTasks } from '@/components/tasks/provider'
 import { formatarDataCurta, hojeISO } from '@/lib/tasks/datas'
 import {
@@ -166,11 +167,12 @@ export function Avatar({
   className?: string
 }) {
   const { nomeDe } = useTasks()
+  const online = useOnline(email)
   const nome = nomeDe(email)
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-card select-none',
+        'relative inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-card select-none',
         tamanho === 'xs' && 'size-5 text-[9px]',
         tamanho === 'sm' && 'size-6 text-[10px]',
         tamanho === 'md' && 'size-7 text-[11px]',
@@ -178,9 +180,18 @@ export function Avatar({
         className,
       )}
       style={{ backgroundColor: corDaPessoa(email) }}
-      title={nome === email ? email : `${nome} · ${email}`}
+      title={`${nome === email ? email : `${nome} · ${email}`}${online ? ' · online agora' : ''}`}
     >
       {iniciais(nome)}
+      {online ? (
+        <span
+          className={cn(
+            'absolute rounded-full bg-positive ring-2 ring-card',
+            tamanho === 'xs' ? '-right-px -bottom-px size-1.5' : tamanho === 'lg' ? '-right-0.5 -bottom-0.5 size-2.5' : '-right-0.5 -bottom-0.5 size-2',
+          )}
+          aria-label="Online agora"
+        />
+      ) : null}
     </span>
   )
 }

@@ -37,9 +37,37 @@ import type {
   Prioridade,
   Resultado,
   Status,
+  Visualizacao,
 } from '@/lib/tasks/types'
-import { PALETA } from '@/lib/tasks/types'
+import { PALETA, VISUALIZACOES } from '@/lib/tasks/types'
 import { cn } from '@/lib/utils'
+
+const SELECT_VIEW =
+  'h-9 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25'
+
+/** Seletor da visualização padrão (espaço ou lista). '' = herdar. */
+function SeletorDeVisualizacao({
+  id,
+  valor,
+  onChange,
+  herdar,
+}: {
+  id: string
+  valor: Visualizacao | null
+  onChange: (v: Visualizacao | null) => void
+  herdar: string
+}) {
+  return (
+    <select id={id} value={valor ?? ''} onChange={(e) => onChange((e.target.value || null) as Visualizacao | null)} className={SELECT_VIEW}>
+      <option value="">{herdar}</option>
+      {(Object.keys(VISUALIZACOES) as Visualizacao[]).map((v) => (
+        <option key={v} value={v}>
+          {VISUALIZACOES[v]}
+        </option>
+      ))}
+    </select>
+  )
+}
 
 /**
  * Diálogos de criação e edição da estrutura: espaço, pasta, lista, nova
@@ -81,6 +109,7 @@ export function EspacoDialog({
   const [cor, setCor] = React.useState(PALETA[11])
   const [privado, setPrivado] = React.useState(false)
   const [membros, setMembros] = React.useState<string[]>([])
+  const [visualizacao, setVisualizacao] = React.useState<Visualizacao | null>(null)
 
   React.useEffect(() => {
     if (!aberto) return
@@ -88,12 +117,13 @@ export function EspacoDialog({
     setCor(espaco?.cor ?? PALETA[11])
     setPrivado(espaco?.privado ?? false)
     setMembros(espaco?.membros ?? [])
+    setVisualizacao(espaco?.visualizacao_padrao ?? null)
     limpar()
   }, [aberto, espaco, limpar])
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault()
-    const payload = { nome, cor, privado, membros: privado ? membros : [] }
+    const payload = { nome, cor, privado, membros: privado ? membros : [], visualizacao_padrao: visualizacao }
     if (espaco) {
       const ok = await executar(() => atualizarEspaco({ id: espaco.id, ...payload }))
       if (ok !== undefined) onOpenChange(false)
@@ -133,6 +163,15 @@ export function EspacoDialog({
           <div className="space-y-1.5">
             <Label>Cor</Label>
             <CorPicker valor={cor} onChange={(c) => setCor(c ?? PALETA[11])} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="espaco-view">Visualização padrão das listas</Label>
+            <SeletorDeVisualizacao id="espaco-view" valor={visualizacao} onChange={setVisualizacao} herdar="Padrão do Tasks (Quadro)" />
+            <p className="text-xs text-muted-foreground">
+              Como as listas deste espaço abrem. Cada lista pode ter o seu padrão; e cada pessoa, ao trocar de aba,
+              mantém a escolha dela naquela lista.
+            </p>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border p-3">
@@ -308,12 +347,14 @@ export function ListaDialog({
   const [nome, setNome] = React.useState('')
   const [cor, setCor] = React.useState<string | null>(null)
   const [descricao, setDescricao] = React.useState('')
+  const [visualizacao, setVisualizacao] = React.useState<Visualizacao | null>(null)
 
   React.useEffect(() => {
     if (!aberto) return
     setNome(lista?.nome ?? '')
     setCor(lista?.cor ?? null)
     setDescricao(lista?.descricao ?? '')
+    setVisualizacao(lista?.visualizacao_padrao ?? null)
     limpar()
   }, [aberto, lista, limpar])
 
@@ -325,6 +366,7 @@ export function ListaDialog({
       nome,
       cor,
       descricao: descricao.trim() || null,
+      visualizacao_padrao: visualizacao,
     }
     if (lista) {
       const ok = await executar(() => atualizarLista({ id: lista.id, ...payload }))
@@ -365,6 +407,10 @@ export function ListaDialog({
           <div className="space-y-1.5">
             <Label>Cor</Label>
             <CorPicker valor={cor} onChange={setCor} permitirNenhuma />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lista-view">Visualização padrão</Label>
+            <SeletorDeVisualizacao id="lista-view" valor={visualizacao} onChange={setVisualizacao} herdar="Herdar do espaço" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="lista-descricao">Descrição (opcional)</Label>

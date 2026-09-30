@@ -44,6 +44,8 @@ import {
   registrarAnexo,
 } from '@/app/tasks/actions'
 import { ConfirmarExclusao, listasDaArvore } from '@/components/tasks/dialogs'
+import { Gravador } from '@/components/tasks/gravador'
+import { LinksDaTarefa, ReuniaoDaTarefa } from '@/components/tasks/links-tarefa'
 import {
   Avatar,
   Avatares,
@@ -316,6 +318,8 @@ export function Detalhe({
 
             <Descricao valor={tarefa.descricao} onSalvar={(d) => salvarComHistorico({ descricao: d })} />
 
+            <LinksDaTarefa links={tarefa.links ?? []} onChange={(links) => salvarComHistorico({ links })} />
+
             {campos.length > 0 ? (
               <CamposPersonalizados
                 campos={campos}
@@ -553,6 +557,10 @@ function Propriedades({ detalhe, salvar }: { detalhe: TarefaDetalhe; salvar: (p:
 
       <Propriedade rotulo="Prioridade">
         <PrioridadePicker valor={tarefa.prioridade} onChange={(p) => salvar({ prioridade: p })} />
+      </Propriedade>
+
+      <Propriedade rotulo="Reunião">
+        <ReuniaoDaTarefa url={tarefa.reuniao_url ?? null} onChange={(u) => salvar({ reuniao_url: u })} />
       </Propriedade>
 
       <Propriedade rotulo="Estimativa">
@@ -890,6 +898,8 @@ function Checklist({
 //  Anexos
 // ---------------------------------------------------------------------------
 
+const LIMITE_ANEXO_BYTES = 50 * 1024 * 1024
+
 function tamanhoLegivel(bytes: number | null): string {
   if (!bytes) return ''
   if (bytes < 1024) return `${bytes} B`
@@ -924,6 +934,10 @@ function Anexos({
 
     for (let i = 0; i < lista.length; i++) {
       const arquivo = lista[i]
+      if (arquivo.size > LIMITE_ANEXO_BYTES) {
+        setErro(`${arquivo.name} tem ${tamanhoLegivel(arquivo.size)}; o limite é 50 MB por arquivo.`)
+        break
+      }
       setProgresso(`Enviando ${i + 1} de ${lista.length}: ${arquivo.name}`)
 
       const pedido = await pedirUploadDeAnexo({
@@ -971,15 +985,18 @@ function Anexos({
         <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           Anexos{anexos.length > 0 ? ` · ${anexos.length}` : ''}
         </h3>
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-          disabled={progresso !== null}
-        >
-          <Upload className="size-3.5" />
-          Enviar arquivo
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Gravador onPronto={(arquivo) => void enviar([arquivo])} desabilitado={progresso !== null} />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            disabled={progresso !== null}
+          >
+            <Upload className="size-3.5" />
+            Enviar arquivo
+          </button>
+        </div>
         <input
           ref={inputRef}
           type="file"
@@ -1015,14 +1032,35 @@ function Anexos({
             className="flex w-full items-center justify-center gap-2 py-4 text-xs text-muted-foreground hover:text-foreground"
           >
             <Paperclip className="size-4" />
-            Arraste arquivos para cá ou clique para escolher (até 50 MB cada)
+            Arraste arquivos para cá, clique para escolher ou grave um clipe (até 50 MB cada)
           </button>
         ) : (
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {anexos.map((a) => {
               const imagem = Boolean(a.tipo_mime?.startsWith('image/')) && Boolean(a.url)
+              const video = Boolean(a.tipo_mime?.startsWith('video/')) && Boolean(a.url)
+              const som = Boolean(a.tipo_mime?.startsWith('audio/')) && Boolean(a.url)
               return (
-                <li key={a.id} className="group relative overflow-hidden rounded-lg border border-border bg-card">
+                <li
+                  key={a.id}
+                  className={cn('group relative overflow-hidden rounded-lg border border-border bg-card', video && 'col-span-2')}
+                >
+                  {video || som ? (
+                    // Clipes tocam aqui mesmo. As URLs são assinadas e temporárias.
+                    <div>
+                      {video ? (
+                        <video src={a.url!} controls preload="metadata" className="aspect-video w-full bg-black" />
+                      ) : (
+                        <div className="flex h-24 items-center px-2">
+                          <audio src={a.url!} controls preload="metadata" className="w-full" />
+                        </div>
+                      )}
+                      <div className="px-2 py-1.5">
+                        <p className="truncate text-[11px] font-medium" title={a.nome}>{a.nome}</p>
+                        <p className="text-[10px] text-muted-foreground">{tamanhoLegivel(a.tamanho)}</p>
+                      </div>
+                    </div>
+                  ) : (
                   <a
                     href={a.url ?? '#'}
                     target="_blank"
@@ -1043,6 +1081,7 @@ function Anexos({
                       <p className="text-[10px] text-muted-foreground">{tamanhoLegivel(a.tamanho)}</p>
                     </div>
                   </a>
+                  )}
                   <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                     {a.url ? (
                       <a
@@ -1265,6 +1304,15 @@ function LinhaAtividade({ atividade, campos }: { atividade: Atividade; campos: C
     case 'anexo_removido':
       conteudo = <>removeu o anexo <strong>{texto(d.nome)}</strong></>
       break
+    case 'reuniao':
+      conteudo = d.para ? <>definiu o link da reunião</> : <>removeu o link da reunião</>
+      break
+    case 'links': {
+      const de = Number(d.de ?? 0)
+      const para = Number(d.para ?? 0)
+      conteudo = para > de ? <>adicionou um link</> : para < de ? <>removeu um link</> : <>alterou os links</>
+      break
+    }
     default:
       conteudo = <>{atividade.tipo}</>
   }

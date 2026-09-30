@@ -1,7 +1,10 @@
 'use client'
 
 import * as React from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Inbox, Plus, UserRound } from 'lucide-react'
+import Link from 'next/link'
+import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock, Inbox, Loader2, Plus, UserRound, Video } from 'lucide-react'
+
+import { reunioesGoogle } from '@/app/tasks/actions'
 
 import { NovaTarefaDialog } from '@/components/tasks/dialogs'
 import { StatusPill, Vazio } from '@/components/tasks/pecas'
@@ -10,6 +13,7 @@ import { TaskRow } from '@/components/tasks/task-row'
 import { Button } from '@/components/ui/button'
 import { grupoDePrazo, type GrupoPrazo } from '@/lib/tasks/agrupamento'
 import { DIAS_SEMANA_CURTOS, diaDaSemana, formatarDataLonga, formatarRelativo, hojeISO, somarDias } from '@/lib/tasks/datas'
+import type { EventoAgenda } from '@/lib/tasks/ics'
 import { STATUS_TIPOS_ORDEM, statusEncerra, type Tarefa } from '@/lib/tasks/types'
 import { cn } from '@/lib/utils'
 
@@ -181,15 +185,49 @@ function GruposDePrazo({ tarefas, hoje, vazio }: { tarefas: Tarefa[]; hoje: stri
 //  Agenda
 // ---------------------------------------------------------------------------
 
+const HORA_SP = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })
+
+function hora(iso: string): string {
+  return HORA_SP.format(new Date(iso))
+}
+
 export function Agenda({ tarefas, inicio, fim }: { tarefas: Tarefa[]; inicio: string; fim: string }) {
   const hoje = hojeISO()
   const [dia, setDia] = React.useState(hoje)
   const doDia = tarefas.filter((t) => t.data_vencimento === dia)
   const { abrirTarefa } = useTasks()
 
+  // Reuniões do Google Calendar da pessoa: chegam depois, sem segurar a
+  // página (o Google pode demorar; o servidor guarda por 5 minutos).
+  const [google, setGoogle] = React.useState<{ carregando: boolean; conectado: boolean; eventos: EventoAgenda[] }>({
+    carregando: true,
+    conectado: true,
+    eventos: [],
+  })
+  React.useEffect(() => {
+    let ativo = true
+    reunioesGoogle({ inicio, fim }).then((r) => {
+      if (!ativo) return
+      if (r.ok) setGoogle({ carregando: false, conectado: r.data.conectado, eventos: r.data.eventos })
+      else setGoogle({ carregando: false, conectado: true, eventos: [] })
+    })
+    return () => {
+      ativo = false
+    }
+  }, [inicio, fim])
+
+  const reunioes = google.eventos.filter((e) => e.dia === dia && !e.dia_inteiro)
+  const diaInteiro = google.eventos.filter((e) => e.dia === dia && e.dia_inteiro)
+  const vazio = doDia.length === 0 && reunioes.length === 0 && diaInteiro.length === 0
+
   return (
     <Painel
-      titulo="Agenda"
+      titulo={
+        <span className="flex items-center gap-2">
+          Agenda
+          {google.carregando ? <Loader2 className="size-3 animate-spin text-muted-foreground" aria-label="Buscando reuniões" /> : null}
+        </span>
+      }
       acoes={
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon-sm" onClick={() => setDia((d) => somarDias(d, -1))} disabled={dia <= inicio} aria-label="Dia anterior">
@@ -213,11 +251,23 @@ export function Agenda({ tarefas, inicio, fim }: { tarefas: Tarefa[]; inicio: st
           {formatarDataLonga(dia)}
         </span>
       </div>
-      {doDia.length === 0 ? (
-        <p className="px-2 py-4 text-center text-xs text-muted-foreground">Nada vence neste dia.</p>
+      {vazio ? (
+        <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+          {google.carregando ? 'Nada vence neste dia.' : 'Nada vence e nenhuma reunião neste dia.'}
+        </p>
       ) : (
         <ul className="space-y-1 px-1">
-          <li className="px-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">O dia todo</li>
+          {doDia.length > 0 || diaInteiro.length > 0 ? (
+            <li className="px-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">O dia todo</li>
+          ) : null}
+          {diaInteiro.map((e) => (
+            <li key={e.id}>
+              <div className="flex w-full items-center gap-2 rounded-md border-l-2 border-l-muted-foreground/40 bg-accent/30 px-2 py-1.5 text-[13px]">
+                <span className="min-w-0 flex-1 truncate">{e.titulo}</span>
+                <span className="text-[11px] text-muted-foreground">Google</span>
+              </div>
+            </li>
+          ))}
           {doDia.map((t) => (
             <li key={t.id}>
               <button
@@ -231,8 +281,43 @@ export function Agenda({ tarefas, inicio, fim }: { tarefas: Tarefa[]; inicio: st
               </button>
             </li>
           ))}
+          {reunioes.length > 0 ? (
+            <li className="px-1 pt-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Reuniões</li>
+          ) : null}
+          {reunioes.map((e) => (
+            <li key={e.id}>
+              <div className="flex w-full items-center gap-2 rounded-md border-l-2 border-l-primary/60 bg-accent/30 px-2 py-1.5 text-[13px]">
+                <span className="shrink-0 text-[11px] text-muted-foreground tabular">
+                  {hora(e.inicio)}–{hora(e.fim)}
+                </span>
+                <span className="min-w-0 flex-1 truncate" title={e.local ?? undefined}>
+                  {e.titulo}
+                </span>
+                {e.reuniao_url ? (
+                  <a
+                    href={e.reuniao_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md bg-positive px-2 text-[11px] font-semibold text-positive-foreground hover:opacity-90"
+                  >
+                    <Video className="size-3" />
+                    Entrar
+                  </a>
+                ) : null}
+              </div>
+            </li>
+          ))}
         </ul>
       )}
+      {!google.carregando && !google.conectado ? (
+        <Link
+          href="/tasks/preferencias"
+          className="mt-2 flex items-center gap-2 rounded-md border border-dashed border-border px-2 py-1.5 text-[11px] text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+        >
+          <CalendarPlus className="size-3.5 shrink-0" />
+          Conecte seu Google Calendar para ver as reuniões do dia aqui.
+        </Link>
+      ) : null}
     </Painel>
   )
 }

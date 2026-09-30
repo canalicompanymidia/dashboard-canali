@@ -1,12 +1,16 @@
 'use server'
 
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { getColaborador, type Colaborador } from '@/lib/auth'
+import { decryptSecret, encryptSecret, isVaultEncryptionConfigured } from '@/lib/crypto'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
-import { getStatuses, getTarefa, getTarefaDetalhe } from '@/lib/tasks/data'
+import { baixarIcsGoogle, getPreferenciasBrutas, getReunioesGoogle, getStatuses, getTarefa, getTarefaDetalhe } from '@/lib/tasks/data'
+import { enderecoGoogleValido, extrairEventos, type EventoAgenda } from '@/lib/tasks/ics'
+import { diferencaDias, hojeISO, somarDias } from '@/lib/tasks/datas'
 import {
   podeAdministrarEspaco,
   podeApagarComentario,
@@ -30,6 +34,7 @@ import {
   primeiraMensagem,
   statusesSchema,
   uuid,
+  periodoSchema,
 } from '@/lib/tasks/schemas'
 import type {
   Anexo,
@@ -38,6 +43,7 @@ import type {
   Comentario,
   Espaco,
   ItemChecklist,
+  PreferenciasTasks,
   Resultado,
   Status,
   Tarefa,
@@ -217,7 +223,7 @@ export async function criarEspaco(input: unknown): Promise<Resultado<{ id: strin
   const parsed = espacoSchema.safeParse(input)
   if (!parsed.success) return falha(primeiraMensagem(parsed.error))
 
-  const { nome, cor, privado, membros } = parsed.data
+  const { nome, cor, privado, membros, visualizacao_padrao } = parsed.data
 
   const { data: maxRow } = await ctx.supabase
     .from('tarefas_espacos')
@@ -232,6 +238,7 @@ export async function criarEspaco(input: unknown): Promise<Resultado<{ id: strin
       nome,
       cor,
       privado,
+      visualizacao_padrao,
       posicao: (maxRow?.posicao ?? -1) + 1,
       criado_por: ctx.colab.email,
     })
@@ -257,7 +264,7 @@ export async function atualizarEspaco(input: unknown): Promise<Resultado> {
   const parsed = espacoSchema.required({ id: true }).safeParse(input)
   if (!parsed.success) return falha(primeiraMensagem(parsed.error))
 
-  const { id, nome, cor, privado, membros } = parsed.data
+  const { id, nome, cor, privado, membros, visualizacao_padrao } = parsed.data
 
   const espaco = await espacoVisivel(ctx, id)
   if (!espaco) return falha('Espaço não encontrado.')
@@ -267,7 +274,7 @@ export async function atualizarEspaco(input: unknown): Promise<Resultado> {
 
   const { error } = await ctx.supabase
     .from('tarefas_espacos')
-    .update({ nome, cor, privado })
+    .update({ nome, cor, privado, visualizacao_padrao })
     .eq('id', id)
   if (error) return falha(`Erro ao salvar: ${error.message}`)
 
@@ -414,7 +421,7 @@ export async function criarLista(input: unknown): Promise<Resultado<{ id: string
   const parsed = listaSchema.safeParse(input)
   if (!parsed.success) return falha(primeiraMensagem(parsed.error))
 
-  const { espaco_id, pasta_id, nome, cor, descricao } = parsed.data
+  const { espaco_id, pasta_id, nome, cor, descricao, visualizacao_padrao } = parsed.data
 
   const espaco = await espacoVisivel(ctx, espaco_id)
   if (!espaco) return falha('Espaço não encontrado.')
@@ -435,6 +442,7 @@ export async function criarLista(input: unknown): Promise<Resultado<{ id: string
       nome,
       cor,
       descricao,
+      visualizacao_padrao,
       posicao: (maxRow?.posicao ?? -1) + 1,
       criado_por: ctx.colab.email,
     })
@@ -483,10 +491,10 @@ export async function atualizarLista(input: unknown): Promise<Resultado> {
   const alvo = await listaVisivel(ctx, parsed.data.id)
   if (!alvo) return falha('Lista não encontrada.')
 
-  const { nome, cor, descricao } = parsed.data
+  const { nome, cor, descricao, visualizacao_padrao } = parsed.data
   const { error } = await ctx.supabase
     .from('tarefas_listas')
-    .update({ nome, cor, descricao })
+    .update({ nome, cor, descricao, visualizacao_padrao })
     .eq('id', alvo.lista.id)
   if (error) return falha(`Erro ao salvar: ${error.message}`)
 
@@ -832,6 +840,12 @@ export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): P
     else campos[patch.campo.id] = v
     update.campos = campos
   }
+  if (patch.reuniao_url !== undefined && (patch.reuniao_url ?? null) !== (atual.reuniao_url ?? null)) {
+    update.reuniao_url = patch.reuniao_url || null
+  }
+  if (patch.links !== undefined && JSON.stringify(patch.links) !== JSON.stringify(atual.links)) {
+    update.links = patch.links
+  }
 
   // Responsáveis vivem em outra tabela: ajusta primeiro, e a atualização
   // da tarefa logo abaixo já carimba o updated_at.
@@ -888,6 +902,8 @@ export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): P
     itens.push({ tipo: 'estimativa', detalhe: { de: atual.estimativa_minutos, para: tarefa.estimativa_minutos } })
   }
   if (update.etiquetas !== undefined) itens.push({ tipo: 'etiquetas', detalhe: { de: atual.etiquetas, para: tarefa.etiquetas } })
+  if (update.reuniao_url !== undefined) itens.push({ tipo: 'reuniao', detalhe: { de: atual.reuniao_url, para: tarefa.reuniao_url } })
+  if (update.links !== undefined) itens.push({ tipo: 'links', detalhe: { de: atual.links.length, para: tarefa.links.length } })
   if (update.campos !== undefined && patch.campo) {
     itens.push({ tipo: 'campo', detalhe: { campo_id: patch.campo.id, de: atual.campos[patch.campo.id] ?? null, para: patch.campo.valor } })
   }
@@ -1338,4 +1354,127 @@ export async function excluirAnexo(anexoId: unknown): Promise<Resultado> {
   })
 
   return sucesso(null)
+}
+
+// ---------------------------------------------------------------------------
+//  PREFERÊNCIAS — agenda assinável e Google Calendar
+// ---------------------------------------------------------------------------
+
+function agendaUrl(origem: string, token: string | null): string | null {
+  return token ? `${origem}/api/tasks/agenda/${token}.ics` : null
+}
+
+async function origemDaRequisicao(): Promise<string> {
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? ''
+  const protocolo = h.get('x-forwarded-proto') ?? 'https'
+  return `${protocolo}://${host}`
+}
+
+/** As preferências da pessoa logada; cria o endereço da agenda na primeira vez. */
+export async function obterPreferencias(): Promise<Resultado<PreferenciasTasks>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  let pref = await getPreferenciasBrutas(ctx.colab.email)
+  if (!pref?.agenda_token) {
+    const token = randomBytes(24).toString('base64url')
+    const { data, error } = await ctx.supabase
+      .from('tarefas_preferencias')
+      .upsert({ email: ctx.colab.email, agenda_token: token }, { onConflict: 'email' })
+      .select('*')
+      .single()
+    if (error || !data) return falha(`Erro ao preparar a agenda: ${error?.message ?? 'sem retorno'}`)
+    pref = data as typeof pref
+  }
+
+  return sucesso({
+    agenda_url: agendaUrl(await origemDaRequisicao(), pref?.agenda_token ?? null),
+    google_calendar_conectado: Boolean(pref?.google_ics_cifrado),
+  })
+}
+
+/** Troca o segredo da agenda: o endereço antigo para de funcionar na hora. */
+export async function renovarAgenda(): Promise<Resultado<PreferenciasTasks>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  const token = randomBytes(24).toString('base64url')
+  const { data, error } = await ctx.supabase
+    .from('tarefas_preferencias')
+    .upsert({ email: ctx.colab.email, agenda_token: token }, { onConflict: 'email' })
+    .select('*')
+    .single()
+  if (error || !data) return falha(`Erro ao renovar: ${error?.message ?? 'sem retorno'}`)
+
+  return sucesso(
+    { agenda_url: agendaUrl(await origemDaRequisicao(), token), google_calendar_conectado: Boolean(data.google_ics_cifrado) },
+    'Endereço novo gerado. O antigo deixou de funcionar.',
+  )
+}
+
+/**
+ * Guarda (cifrado) o endereço iCal secreto do Google Calendar da pessoa,
+ * depois de confirmar que ele responde. null remove a conexão.
+ */
+export async function salvarGoogleIcs(input: unknown): Promise<Resultado<{ conectado: boolean; eventos30d: number }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  if (input === null || input === '') {
+    const { error } = await ctx.supabase
+      .from('tarefas_preferencias')
+      .upsert({ email: ctx.colab.email, google_ics_cifrado: null }, { onConflict: 'email' })
+    if (error) return falha(`Erro ao desconectar: ${error.message}`)
+    return sucesso({ conectado: false, eventos30d: 0 }, 'Google Calendar desconectado.')
+  }
+
+  const url = typeof input === 'string' ? input.trim() : ''
+  if (!enderecoGoogleValido(url)) {
+    return falha(
+      'Este não parece ser o endereço secreto iCal do Google Calendar. Ele começa com https://calendar.google.com/calendar/ical/ e termina em .ics.',
+    )
+  }
+  if (!isVaultEncryptionConfigured()) {
+    return falha('O Hub precisa de VAULT_ENCRYPTION_KEY configurada para guardar este endereço com segurança.')
+  }
+
+  const texto = await baixarIcsGoogle(url, false)
+  if (!texto) return falha('O Google não respondeu a esse endereço. Confira se copiou o link inteiro.')
+
+  let eventos30d = 0
+  try {
+    const hoje = hojeISO()
+    eventos30d = extrairEventos(texto, hoje, somarDias(hoje, 30)).length
+  } catch {
+    return falha('O arquivo do Google veio num formato que não consegui ler.')
+  }
+
+  const { error } = await ctx.supabase
+    .from('tarefas_preferencias')
+    .upsert({ email: ctx.colab.email, google_ics_cifrado: encryptSecret(url) }, { onConflict: 'email' })
+  if (error) return falha(`Erro ao salvar: ${error.message}`)
+
+  // Confirma que o que foi guardado abre de volta.
+  const pref = await getPreferenciasBrutas(ctx.colab.email)
+  if (decryptSecret(pref?.google_ics_cifrado) !== url) return falha('Falha ao conferir o endereço guardado.')
+
+  revalidatePath('/tasks')
+  return sucesso({ conectado: true, eventos30d }, `Google Calendar conectado: ${eventos30d} evento(s) nos próximos 30 dias.`)
+}
+
+/** Reuniões do Google Calendar da pessoa logada, para a Agenda do Início. */
+export async function reunioesGoogle(input: unknown): Promise<Resultado<{ conectado: boolean; eventos: EventoAgenda[] }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  const parsed = periodoSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { inicio, fim } = parsed.data
+  if (diferencaDias(inicio, fim) > 62) return falha('Período grande demais.')
+
+  const pref = await getPreferenciasBrutas(ctx.colab.email)
+  if (!pref?.google_ics_cifrado) return sucesso({ conectado: false, eventos: [] })
+
+  return sucesso({ conectado: true, eventos: await getReunioesGoogle(ctx.colab.email, inicio, fim) })
 }

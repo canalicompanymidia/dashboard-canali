@@ -1,16 +1,20 @@
 'use client'
 
 import * as React from 'react'
-import { CalendarDays, List, MoreHorizontal, Pencil, Plus, Settings2, SquareKanban } from 'lucide-react'
+import { CalendarDays, List, MoreHorizontal, Pencil, Pin, Plus, Settings2, SquareKanban } from 'lucide-react'
+
+import { atualizarLista } from '@/app/tasks/actions'
 
 import { ListaDialog, NovaTarefaDialog } from '@/components/tasks/dialogs'
 import { ListaConfigDialog } from '@/components/tasks/lista-config'
 import { AbasDeVisualizacao, Topbar, type Crumb } from '@/components/tasks/topbar'
+import { useAcao } from '@/components/tasks/use-acao'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import type { ListaContexto } from '@/lib/tasks/types'
+import { VISUALIZACOES, type ListaContexto, type Visualizacao } from '@/lib/tasks/types'
+import { lembrarVisualizacao } from '@/lib/tasks/visualizacao'
 
-export type VisualizacaoLista = 'lista' | 'quadro' | 'calendario'
+export type VisualizacaoLista = Visualizacao
 
 /** Barra superior da tela de lista: trilha, abas de visualização e ações. */
 export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view: VisualizacaoLista }) {
@@ -18,6 +22,25 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
   const [novaTarefa, setNovaTarefa] = React.useState(false)
   const [config, setConfig] = React.useState(false)
   const [editar, setEditar] = React.useState(false)
+  const { executar, pendente } = useAcao()
+
+  const jaEhPadrao = lista.visualizacao_padrao === view
+
+  /** "Abrir sempre em Quadro": grava a aba atual como padrão desta lista, para todo mundo. */
+  async function fixarPadrao() {
+    if (jaEhPadrao) return
+    await executar(() =>
+      atualizarLista({
+        id: lista.id,
+        espaco_id: espaco.id,
+        pasta_id: lista.pasta_id,
+        nome: lista.nome,
+        cor: lista.cor,
+        descricao: lista.descricao,
+        visualizacao_padrao: view,
+      }),
+    )
+  }
 
   const crumbs: Crumb[] = [
     { label: espaco.nome, href: `/tasks/e/${espaco.id}`, tipo: 'espaco', cor: espaco.cor, privado: espaco.privado },
@@ -34,6 +57,7 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
         abaixo={
           <AbasDeVisualizacao
             atual={view}
+            onEscolher={(v) => lembrarVisualizacao(lista.id, v as Visualizacao)}
             itens={[
               { chave: 'lista', label: 'Lista', href: `${base}?view=lista`, icone: List },
               { chave: 'quadro', label: 'Quadro', href: `${base}?view=quadro`, icone: SquareKanban },
@@ -63,6 +87,10 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
             <DropdownMenuItem onSelect={() => setConfig(true)}>
               <Settings2 />
               Status e campos
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void fixarPadrao()} disabled={jaEhPadrao || pendente}>
+              <Pin />
+              {jaEhPadrao ? `${VISUALIZACOES[view]} já é o padrão desta lista` : `Abrir sempre em ${VISUALIZACOES[view]}`}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

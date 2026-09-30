@@ -40,12 +40,15 @@ const email = z
 //  Espaços, pastas, listas
 // ---------------------------------------------------------------------------
 
+const visualizacao = z.enum(['lista', 'quadro', 'calendario']).nullable().default(null)
+
 export const espacoSchema = z.object({
   id: uuid.optional(),
   nome: nomeCurto('o nome do espaço'),
   cor,
   privado: z.boolean().default(false),
   membros: z.array(email).max(200).default([]),
+  visualizacao_padrao: visualizacao,
 })
 
 export const pastaSchema = z.object({
@@ -61,6 +64,7 @@ export const listaSchema = z.object({
   nome: nomeCurto('o nome da lista'),
   cor: cor.nullable().default(null),
   descricao: z.string().trim().max(500).nullable().default(null),
+  visualizacao_padrao: visualizacao,
 })
 
 /** Conjunto completo de status de uma lista, na ordem em que deve ficar. */
@@ -143,6 +147,22 @@ export const patchTarefaSchema = z
     estimativa_minutos: z.number().int().min(0).max(100000).nullable().optional(),
     etiquetas: etiquetas.optional(),
     responsaveis: z.array(email).max(50).optional(),
+    reuniao_url: z
+      .string()
+      .trim()
+      .max(500)
+      .regex(/^https?:\/\//i, { message: 'O link da reunião precisa começar com https://' })
+      .nullable()
+      .optional(),
+    links: z
+      .array(
+        z.object({
+          url: z.string().trim().max(1000).regex(/^https?:\/\//i, { message: 'Links precisam começar com https://' }),
+          titulo: z.string().trim().min(1).max(120),
+        }),
+      )
+      .max(30)
+      .optional(),
     /** Valor de UM campo personalizado. */
     campo: z
       .object({
@@ -197,3 +217,9 @@ export const anexoRegistroSchema = anexoPedidoSchema.extend({
 export function primeiraMensagem(erro: z.ZodError): string {
   return erro.issues[0]?.message ?? 'Dados inválidos.'
 }
+
+/** Intervalo de datas para a agenda do Google (o tamanho é checado na action). */
+const diaISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')
+export const periodoSchema = z
+  .object({ inicio: diaISO, fim: diaISO })
+  .refine((p) => p.inicio <= p.fim, { message: 'Período invertido.' })

@@ -3,10 +3,12 @@ import 'server-only'
 import { cache } from 'react'
 
 import type { Colaborador } from '@/lib/auth'
+import { decryptSecret } from '@/lib/crypto'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
 
 import { hojeISO } from './datas'
 import { podeVerEspaco } from './permissoes'
+import { enderecoGoogleValido, extrairEventos, type EventoAgenda } from './ics'
 import { BUCKET_ANEXOS } from './types'
 import type {
   Anexo,
@@ -254,6 +256,7 @@ function normalizarTarefa(linha: Record<string, unknown>): Tarefa {
     ...(linha as unknown as Tarefa),
     etiquetas: Array.isArray(linha.etiquetas) ? (linha.etiquetas as string[]) : [],
     responsaveis: Array.isArray(linha.responsaveis) ? (linha.responsaveis as string[]) : [],
+    links: Array.isArray(linha.links) ? (linha.links as Tarefa['links']) : [],
     campos:
       linha.campos && typeof linha.campos === 'object'
         ? (linha.campos as Tarefa['campos'])
@@ -478,5 +481,65 @@ export async function getTarefaDetalhe(id: string, colab: Colaborador): Promise<
     anexos: await assinarAnexos((anexosRes.data ?? []) as Omit<Anexo, 'url'>[]),
     statuses,
     campos,
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  Preferências e Google Calendar
+// ---------------------------------------------------------------------------
+
+export interface PreferenciasBrutas {
+  email: string
+  agenda_token: string | null
+  google_ics_cifrado: string | null
+}
+
+export async function getPreferenciasBrutas(email: string): Promise<PreferenciasBrutas | null> {
+  const supabase = db()
+  if (!supabase) return null
+  const { data } = await supabase.from('tarefas_preferencias').select('*').eq('email', email).maybeSingle()
+  return (data as PreferenciasBrutas | null) ?? null
+}
+
+/** Cache curto do .ics do Google por pessoa: a agenda do Início não precisa bater no Google a cada clique. */
+const cacheGoogle = new Map<string, { em: number; texto: string }>()
+const VALIDADE_GOOGLE_MS = 5 * 60_000
+const LIMITE_ICS_BYTES = 5 * 1024 * 1024
+
+/** Baixa o .ics do endereço secreto (com cache) e devolve o texto, ou null. */
+export async function baixarIcsGoogle(url: string, usarCache = true): Promise<string | null> {
+  if (!enderecoGoogleValido(url)) return null
+  const guardado = cacheGoogle.get(url)
+  if (usarCache && guardado && Date.now() - guardado.em < VALIDADE_GOOGLE_MS) return guardado.texto
+
+  const controlador = new AbortController()
+  const timer = setTimeout(() => controlador.abort(), 12_000)
+  try {
+    const res = await fetch(url, { signal: controlador.signal, cache: 'no-store', headers: { Accept: 'text/calendar' } })
+    if (!res.ok) return null
+    const tamanho = Number(res.headers.get('content-length') ?? 0)
+    if (tamanho > LIMITE_ICS_BYTES) return null
+    const texto = await res.text()
+    if (texto.length > LIMITE_ICS_BYTES || !texto.includes('BEGIN:VCALENDAR')) return null
+    cacheGoogle.set(url, { em: Date.now(), texto })
+    return texto
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** Reuniões do Google Calendar da pessoa no período. Vazio se ela não conectou ou se o Google falhou. */
+export async function getReunioesGoogle(email: string, inicio: string, fim: string): Promise<EventoAgenda[]> {
+  const pref = await getPreferenciasBrutas(email)
+  const url = decryptSecret(pref?.google_ics_cifrado)
+  if (!url) return []
+  const texto = await baixarIcsGoogle(url)
+  if (!texto) return []
+  try {
+    return extrairEventos(texto, inicio, fim)
+  } catch {
+    return []
   }
 }

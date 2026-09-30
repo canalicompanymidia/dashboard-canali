@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { Database } from 'lucide-react'
 
 import { AtualizarAoVoltar } from '@/components/tasks/atualizar-ao-voltar'
+import { PresencaProvider } from '@/components/tasks/presenca'
 import { TasksProvider } from '@/components/tasks/provider'
 import { TasksSidebar } from '@/components/tasks/sidebar'
 import { TaskOverlay } from '@/components/tasks/task-overlay'
@@ -29,16 +30,18 @@ export default async function TasksLayout({ children }: { children: React.ReactN
 
   return (
     <TasksProvider colab={colab} pessoas={pessoas} arvore={arvore}>
-      {/* Altura fixa = viewport menos o cabeçalho: cada área rola por conta
-          própria, como um aplicativo, e não a página inteira. */}
-      <div className="flex h-[calc(100dvh-4rem)] overflow-hidden">
-        <TasksSidebar />
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
-      </div>
-      <Suspense fallback={null}>
-        <TaskOverlay />
-      </Suspense>
-      <AtualizarAoVoltar />
+      <PresencaProvider email={colab.email}>
+        {/* Altura fixa = viewport menos o cabeçalho: cada área rola por conta
+            própria, como um aplicativo, e não a página inteira. */}
+        <div className="flex h-[calc(100dvh-4rem)] overflow-hidden">
+          <TasksSidebar />
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+        </div>
+        <Suspense fallback={null}>
+          <TaskOverlay />
+        </Suspense>
+        <AtualizarAoVoltar />
+      </PresencaProvider>
     </TasksProvider>
   )
 }

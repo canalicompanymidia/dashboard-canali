@@ -94,9 +94,12 @@ export function Topbar({
 export function AbasDeVisualizacao({
   itens,
   atual,
+  onEscolher,
 }: {
   itens: { chave: string; label: string; href: string; icone: React.ComponentType<{ className?: string }> }[]
   atual: string
+  /** Chamado antes de navegar: quem usa pode lembrar a escolha. */
+  onEscolher?: (chave: string) => void
 }) {
   return (
     <div className="-mb-px flex gap-1 overflow-x-auto" role="tablist">
@@ -108,6 +111,7 @@ export function AbasDeVisualizacao({
             href={item.href}
             role="tab"
             aria-selected={ativo}
+            onClick={() => onEscolher?.(item.chave)}
             className={cn(
               'flex h-9 items-center gap-1.5 border-b-2 px-2 text-[13px] font-medium whitespace-nowrap transition-colors',
               ativo
