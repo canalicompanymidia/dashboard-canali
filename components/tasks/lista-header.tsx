@@ -1,17 +1,19 @@
 'use client'
 
 import * as React from 'react'
-import { CalendarDays, List, MoreHorizontal, Pencil, Pin, Plus, Settings2, SquareKanban } from 'lucide-react'
+import { CalendarDays, List, MoreHorizontal, Pencil, Pin, Plus, Settings2, SquareKanban, Star } from 'lucide-react'
 
 import { atualizarLista } from '@/app/tasks/actions'
 
 import { ListaDialog, NovaTarefaDialog } from '@/components/tasks/dialogs'
 import { ListaConfigDialog } from '@/components/tasks/lista-config'
+import { useTasks } from '@/components/tasks/provider'
 import { AbasDeVisualizacao, Topbar, type Crumb } from '@/components/tasks/topbar'
 import { useAcao } from '@/components/tasks/use-acao'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { VISUALIZACOES, type ListaContexto, type Visualizacao } from '@/lib/tasks/types'
+import { cn } from '@/lib/utils'
 import { lembrarVisualizacao } from '@/lib/tasks/visualizacao'
 
 export type VisualizacaoLista = Visualizacao
@@ -23,6 +25,8 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
   const [config, setConfig] = React.useState(false)
   const [editar, setEditar] = React.useState(false)
   const { executar, pendente } = useAcao()
+  const { ehFavorito, alternarFavorito } = useTasks()
+  const favorita = ehFavorito('lista', lista.id)
 
   const jaEhPadrao = lista.visualizacao_padrao === view
 
@@ -69,6 +73,16 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
         <Button size="sm" onClick={() => setNovaTarefa(true)}>
           <Plus className="size-4" />
           <span className="hidden sm:inline">Tarefa</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => void alternarFavorito('lista', lista.id)}
+          aria-label={favorita ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          aria-pressed={favorita}
+          title={favorita ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        >
+          <Star className={cn('size-4', favorita && 'fill-current text-warning-foreground dark:text-warning')} />
         </Button>
         <Button variant="outline" size="icon-sm" onClick={() => setConfig(true)} aria-label="Configurações da lista" title="Status, campos e dados da lista">
           <Settings2 className="size-4" />

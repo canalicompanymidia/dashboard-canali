@@ -9,7 +9,8 @@ import { TasksSidebar } from '@/components/tasks/sidebar'
 import { TaskOverlay } from '@/components/tasks/task-overlay'
 import { requireColaborador } from '@/lib/auth'
 import { isServiceRoleConfigured } from '@/lib/supabase/config'
-import { getArvore, getPessoas, tasksDisponivel } from '@/lib/tasks/data'
+import { getArvore, getFavoritos, getPessoas, tasksDisponivel } from '@/lib/tasks/data'
+import type { Pessoa } from '@/lib/tasks/types'
 
 export const metadata: Metadata = {
   title: 'Tasks',
@@ -26,10 +27,12 @@ export default async function TasksLayout({ children }: { children: React.ReactN
     return <TasksIndisponivel configurado={isServiceRoleConfigured()} />
   }
 
-  const [arvore, pessoas] = await Promise.all([getArvore(colab), getPessoas()])
+  const [arvore, pessoas, favoritos] = await Promise.all([getArvore(colab), getPessoas(), getFavoritos(colab.email)])
+  // Quem está logado, com o perfil (foto, cargo) — o mesmo registro da lista de pessoas.
+  const eu: Pessoa = pessoas.find((p) => p.email === colab.email) ?? { ...colab, avatar_url: null, cargo: null, gestor_email: null }
 
   return (
-    <TasksProvider colab={colab} pessoas={pessoas} arvore={arvore}>
+    <TasksProvider colab={eu} pessoas={pessoas} arvore={arvore} favoritos={favoritos}>
       <PresencaProvider email={colab.email}>
         {/* Altura fixa = viewport menos o cabeçalho: cada área rola por conta
             própria, como um aplicativo, e não a página inteira. */}

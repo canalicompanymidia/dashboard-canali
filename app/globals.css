@@ -300,3 +300,77 @@
     display: none !important;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Organograma (Tasks › Equipes): árvore com conectores em CSS puro.
+   Cada <ul> é uma geração; cada <li> um cartão com a própria subárvore.
+   --------------------------------------------------------------------- */
+.organograma ul {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  padding-top: 1.25rem;
+  margin: 0;
+}
+.organograma ul ul::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 1.25rem;
+  border-left: 1px solid var(--border);
+}
+.organograma li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.25rem 0.5rem 0;
+  list-style: none;
+}
+.organograma li::before,
+.organograma li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.organograma li::after {
+  right: auto;
+  left: 50%;
+  border-left: 1px solid var(--border);
+}
+.organograma li:only-child::before,
+.organograma li:only-child::after {
+  display: none;
+}
+.organograma li:only-child {
+  padding-top: 0;
+}
+.organograma li:first-child::before,
+.organograma li:last-child::after {
+  border: 0 none;
+}
+.organograma li:last-child::before {
+  border-right: 1px solid var(--border);
+  border-radius: 0 6px 0 0;
+}
+.organograma li:first-child::after {
+  border-radius: 6px 0 0 0;
+}
+/* A primeira geração não desce de ninguém. */
+.organograma > ul {
+  padding-top: 0;
+  gap: 1.5rem;
+}
+.organograma > ul > li {
+  padding-top: 0;
+}
+.organograma > ul > li::before,
+.organograma > ul > li::after {
+  display: none;
+}

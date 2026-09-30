@@ -3,8 +3,8 @@
 import * as React from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
-import { carregarTarefa } from '@/app/tasks/actions'
-import type { EspacoComArvore, EventoTarefa, Pessoa, Resultado, TarefaDetalhe } from '@/lib/tasks/types'
+import { alternarFavorito as alternarFavoritoNoServidor, carregarTarefa } from '@/app/tasks/actions'
+import type { EspacoComArvore, EventoTarefa, Favorito, Pessoa, Resultado, TarefaDetalhe, TipoFavorito } from '@/lib/tasks/types'
 
 interface TasksContextValue {
   colab: Pessoa
@@ -26,6 +26,11 @@ interface TasksContextValue {
   ouvir: (fn: (evento: EventoTarefa) => void) => () => void
   sidebarAberta: boolean
   setSidebarAberta: (aberta: boolean) => void
+  /** Espaços e listas que a pessoa fixou na barra lateral. */
+  favoritos: Favorito[]
+  ehFavorito: (tipo: TipoFavorito, id: string) => boolean
+  /** Fixa/solta na hora; o servidor confirma por trás (e desfaz se recusar). */
+  alternarFavorito: (tipo: TipoFavorito, id: string) => Promise<void>
 }
 
 const TasksContext = React.createContext<TasksContextValue | null>(null)
@@ -47,16 +52,36 @@ export function TasksProvider({
   colab,
   pessoas,
   arvore,
+  favoritos: favoritosDoServidor,
   children,
 }: {
   colab: Pessoa
   pessoas: Pessoa[]
   arvore: EspacoComArvore[]
+  favoritos: Favorito[]
   children: React.ReactNode
 }) {
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarAberta, setSidebarAberta] = React.useState(false)
+  const [favoritos, setFavoritos] = React.useState(favoritosDoServidor)
+  React.useEffect(() => setFavoritos(favoritosDoServidor), [favoritosDoServidor])
+
+  const ehFavorito = React.useCallback(
+    (tipo: TipoFavorito, id: string) => favoritos.some((f) => f.tipo === tipo && f.item_id === id),
+    [favoritos],
+  )
+
+  const alternarFavorito = React.useCallback(async (tipo: TipoFavorito, id: string) => {
+    let anterior: Favorito[] = []
+    setFavoritos((atual) => {
+      anterior = atual
+      const existe = atual.some((f) => f.tipo === tipo && f.item_id === id)
+      return existe ? atual.filter((f) => !(f.tipo === tipo && f.item_id === id)) : [...atual, { tipo, item_id: id }]
+    })
+    const r = await alternarFavoritoNoServidor({ tipo, item_id: id })
+    if (!r.ok) setFavoritos(anterior)
+  }, [])
   const ouvintes = React.useRef(new Set<(evento: EventoTarefa) => void>())
   const prefetches = React.useRef(new Map<string, { em: number; promessa: Promise<Resultado<TarefaDetalhe>> }>())
 
@@ -142,8 +167,11 @@ export function TasksProvider({
       ouvir,
       sidebarAberta,
       setSidebarAberta,
+      favoritos,
+      ehFavorito,
+      alternarFavorito,
     }),
-    [colab, pessoas, pessoa, nomeDe, arvore, abrirTarefa, fecharTarefa, prefetchTarefa, pegarDetalhe, emitir, ouvir, sidebarAberta],
+    [colab, pessoas, pessoa, nomeDe, arvore, abrirTarefa, fecharTarefa, prefetchTarefa, pegarDetalhe, emitir, ouvir, sidebarAberta, favoritos, ehFavorito, alternarFavorito],
   )
 
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>

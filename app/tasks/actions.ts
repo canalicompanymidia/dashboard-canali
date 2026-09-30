@@ -1,6 +1,6 @@
 'use server'
 
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -8,7 +8,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getColaborador, type Colaborador } from '@/lib/auth'
 import { decryptSecret, encryptSecret, isVaultEncryptionConfigured } from '@/lib/crypto'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
-import { baixarIcsGoogle, getPreferenciasBrutas, getReunioesGoogle, getStatuses, getTarefa, getTarefaDetalhe } from '@/lib/tasks/data'
+import {
+  baixarIcsGoogle,
+  esquecerAvatar,
+  getPreferenciasBrutas,
+  getReunioesGoogle,
+  getStatuses,
+  getTarefa,
+  getTarefaDetalhe,
+} from '@/lib/tasks/data'
 import { enderecoGoogleValido, extrairEventos, type EventoAgenda } from '@/lib/tasks/ics'
 import { diferencaDias, hojeISO, somarDias } from '@/lib/tasks/datas'
 import {
@@ -21,16 +29,23 @@ import {
 import {
   anexoPedidoSchema,
   anexoRegistroSchema,
+  avatarPedidoSchema,
+  avatarRegistroSchema,
   campoSchema,
   checklistItemSchema,
   comentarioSchema,
+  equipeSchema,
   espacoSchema,
+  favoritoSchema,
+  gestorSchema,
   listaSchema,
   moverParaListaSchema,
   moverTarefaSchema,
   novaTarefaSchema,
   pastaSchema,
   patchTarefaSchema,
+  perfilSchema,
+  pessoaAdminSchema,
   primeiraMensagem,
   statusesSchema,
   uuid,
@@ -41,6 +56,7 @@ import type {
   Atividade,
   Campo,
   Comentario,
+  Equipe,
   Espaco,
   ItemChecklist,
   PreferenciasTasks,
@@ -50,7 +66,7 @@ import type {
   TarefaAtualizada,
   TarefaDetalhe,
 } from '@/lib/tasks/types'
-import { BUCKET_ANEXOS, PRIORIDADES } from '@/lib/tasks/types'
+import { BUCKET_ANEXOS, BUCKET_AVATARES, PRIORIDADES } from '@/lib/tasks/types'
 
 /**
  * Server Actions do módulo Tasks.
@@ -1477,4 +1493,299 @@ export async function reunioesGoogle(input: unknown): Promise<Resultado<{ conect
   if (!pref?.google_ics_cifrado) return sucesso({ conectado: false, eventos: [] })
 
   return sucesso({ conectado: true, eventos: await getReunioesGoogle(ctx.colab.email, inicio, fim) })
+}
+
+// ---------------------------------------------------------------------------
+//  FAVORITOS — espaços e listas fixados na barra lateral
+// ---------------------------------------------------------------------------
+
+/** Fixa ou solta um espaço/lista. Devolve como ficou. */
+export async function alternarFavorito(input: unknown): Promise<Resultado<{ favorito: boolean }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  const parsed = favoritoSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { tipo, item_id } = parsed.data
+
+  const visivel = tipo === 'espaco' ? await espacoVisivel(ctx, item_id) : await listaVisivel(ctx, item_id)
+  if (!visivel) return falha('Item não encontrado.')
+
+  const chave = { email: ctx.colab.email, tipo, item_id }
+  const { data: existe } = await ctx.supabase.from('tarefas_favoritos').select('item_id').match(chave).maybeSingle()
+
+  if (existe) {
+    const { error } = await ctx.supabase.from('tarefas_favoritos').delete().match(chave)
+    if (error) return falha(`Erro ao remover dos favoritos: ${error.message}`)
+    revalidar()
+    return sucesso({ favorito: false })
+  }
+
+  const { error } = await ctx.supabase.from('tarefas_favoritos').insert(chave)
+  if (error) return falha(`Erro ao favoritar: ${error.message}`)
+  revalidar()
+  return sucesso({ favorito: true })
+}
+
+// ---------------------------------------------------------------------------
+//  PERFIL — o que a própria pessoa edita: nome, cargo e foto
+// ---------------------------------------------------------------------------
+
+/** Pasta da pessoa no bucket de fotos: derivada do e-mail, sem expô-lo no caminho. */
+function pastaDeAvatar(email: string): string {
+  return createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 24)
+}
+
+export async function salvarPerfil(input: unknown): Promise<Resultado<{ nome: string; cargo: string | null }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  const parsed = perfilSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { nome, cargo } = parsed.data
+
+  const { error: erroNome } = await ctx.supabase
+    .from('colaboradores_autorizados')
+    .update({ nome })
+    .ilike('email', ctx.colab.email)
+  if (erroNome) return falha(`Erro ao salvar o nome: ${erroNome.message}`)
+
+  const { error: erroPerfil } = await ctx.supabase
+    .from('colaboradores_perfis')
+    .upsert({ email: ctx.colab.email, cargo: cargo || null }, { onConflict: 'email' })
+  if (erroPerfil) return falha(`Erro ao salvar o perfil: ${erroPerfil.message}`)
+
+  revalidatePath('/', 'layout')
+  return sucesso({ nome, cargo: cargo || null }, 'Perfil salvo.')
+}
+
+/** URL assinada para o navegador subir a foto direto no bucket privado. */
+export async function pedirUploadDeAvatar(input: unknown): Promise<Resultado<{ caminho: string; token: string }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  const parsed = avatarPedidoSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+
+  const ext = parsed.data.tipo_mime === 'image/png' ? 'png' : parsed.data.tipo_mime === 'image/webp' ? 'webp' : 'jpg'
+  const caminho = `${pastaDeAvatar(ctx.colab.email)}/${randomUUID()}.${ext}`
+
+  const { data, error } = await ctx.supabase.storage.from(BUCKET_AVATARES).createSignedUploadUrl(caminho)
+  if (error || !data) {
+    return falha(
+      `Não foi possível preparar o envio: ${error?.message ?? 'sem retorno'}. ` +
+        'Confira se o bucket "avatares" existe no Supabase (migration 0009).',
+    )
+  }
+  return sucesso({ caminho: data.path, token: data.token })
+}
+
+/** Depois do upload: confere que a foto chegou, troca no perfil e apaga a anterior. */
+export async function registrarAvatar(input: unknown): Promise<Resultado<{ avatar_url: string }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  const parsed = avatarRegistroSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { caminho } = parsed.data
+
+  // Só a pasta desta pessoa — o caminho tem que ser um que ESTE servidor gerou para ela.
+  if (!caminho.startsWith(`${pastaDeAvatar(ctx.colab.email)}/`)) return falha('Caminho inválido.')
+
+  const { data: assinada, error: erroAssinatura } = await ctx.supabase.storage
+    .from(BUCKET_AVATARES)
+    .createSignedUrl(caminho, 24 * 60 * 60)
+  if (erroAssinatura || !assinada) return falha('A foto não chegou ao servidor. Tente de novo.')
+
+  const { data: atual } = await ctx.supabase
+    .from('colaboradores_perfis')
+    .select('avatar_path')
+    .eq('email', ctx.colab.email)
+    .maybeSingle()
+
+  const { error } = await ctx.supabase
+    .from('colaboradores_perfis')
+    .upsert({ email: ctx.colab.email, avatar_path: caminho }, { onConflict: 'email' })
+  if (error) return falha(`Erro ao salvar a foto: ${error.message}`)
+
+  const anterior = (atual?.avatar_path as string | null) ?? null
+  if (anterior && anterior !== caminho) {
+    await ctx.supabase.storage.from(BUCKET_AVATARES).remove([anterior])
+    esquecerAvatar(anterior)
+  }
+
+  revalidatePath('/', 'layout')
+  return sucesso({ avatar_url: assinada.signedUrl }, 'Foto atualizada.')
+}
+
+export async function removerAvatar(): Promise<Resultado> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  const { data: atual } = await ctx.supabase
+    .from('colaboradores_perfis')
+    .select('avatar_path')
+    .eq('email', ctx.colab.email)
+    .maybeSingle()
+  const caminho = (atual?.avatar_path as string | null) ?? null
+  if (!caminho) return sucesso(null)
+
+  const { error } = await ctx.supabase
+    .from('colaboradores_perfis')
+    .update({ avatar_path: null })
+    .eq('email', ctx.colab.email)
+  if (error) return falha(`Erro ao remover a foto: ${error.message}`)
+
+  await ctx.supabase.storage.from(BUCKET_AVATARES).remove([caminho])
+  esquecerAvatar(caminho)
+  revalidatePath('/', 'layout')
+  return sucesso(null, 'Foto removida.')
+}
+
+// ---------------------------------------------------------------------------
+//  EQUIPES E ORGANOGRAMA — só administradores mudam
+// ---------------------------------------------------------------------------
+
+function somenteAdmin(ctx: Contexto): string | null {
+  return ctx.colab.papel === 'admin' ? null : 'Só administradores podem alterar equipes e o organograma.'
+}
+
+/** true se a pessoa existe e está ativa na lista de acesso. */
+async function pessoaAtiva(ctx: Contexto, email: string): Promise<boolean> {
+  const { data } = await ctx.supabase
+    .from('colaboradores_autorizados')
+    .select('ativo')
+    .ilike('email', email)
+    .maybeSingle()
+  return Boolean(data?.ativo)
+}
+
+/**
+ * Um gestor não pode ser a própria pessoa nem alguém abaixo dela: sobe
+ * a cadeia a partir do gestor proposto e, se chegar na pessoa, é ciclo.
+ */
+async function gestorValido(ctx: Contexto, email: string, gestor: string | null): Promise<string | null> {
+  if (!gestor) return null
+  if (gestor === email) return 'Uma pessoa não pode ser gestora de si mesma.'
+  if (!(await pessoaAtiva(ctx, gestor))) return 'Gestor não encontrado entre os colaboradores ativos.'
+  const { data } = await ctx.supabase.from('colaboradores_perfis').select('email, gestor_email')
+  const mapa = new Map<string, string | null>()
+  for (const p of (data ?? []) as { email: string; gestor_email: string | null }[]) mapa.set(p.email, p.gestor_email)
+  let atual: string | null = gestor
+  for (let passos = 0; atual && passos < 200; passos++) {
+    if (atual === email) return 'Isso criaria um ciclo: essa pessoa já está abaixo dela no organograma.'
+    atual = mapa.get(atual) ?? null
+  }
+  return null
+}
+
+async function trocarEquipesDe(ctx: Contexto, email: string, equipes: string[]): Promise<string | null> {
+  const { error: erroApaga } = await ctx.supabase.from('equipe_membros').delete().eq('email', email)
+  if (erroApaga) return erroApaga.message
+  if (equipes.length === 0) return null
+  const { error } = await ctx.supabase
+    .from('equipe_membros')
+    .insert([...new Set(equipes)].map((equipe_id) => ({ equipe_id, email })))
+  return error ? error.message : null
+}
+
+/** Cria ou atualiza uma equipe, com líder e membros. */
+export async function salvarEquipe(input: unknown): Promise<Resultado<Equipe>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const bloqueio = somenteAdmin(ctx)
+  if (bloqueio) return falha(bloqueio)
+
+  const parsed = equipeSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { id, nome, cor, descricao, lider_email, membros } = parsed.data
+
+  const linha = { nome, cor, descricao, lider_email }
+  const consulta = id
+    ? ctx.supabase.from('equipes').update(linha).eq('id', id).select('*').single()
+    : ctx.supabase.from('equipes').insert({ ...linha, criado_por: ctx.colab.email }).select('*').single()
+  const { data, error } = await consulta
+  if (error || !data) {
+    if (error?.code === '23505') return falha('Já existe uma equipe com esse nome.')
+    return falha(`Erro ao salvar a equipe: ${error?.message ?? 'sem retorno'}`)
+  }
+
+  const { error: erroApaga } = await ctx.supabase.from('equipe_membros').delete().eq('equipe_id', data.id)
+  if (erroApaga) return falha(`Erro ao atualizar os membros: ${erroApaga.message}`)
+  const lista = [...new Set(membros)]
+  if (lista.length > 0) {
+    const { error: erroMembros } = await ctx.supabase
+      .from('equipe_membros')
+      .insert(lista.map((email) => ({ equipe_id: data.id, email })))
+    if (erroMembros) return falha(`Erro ao atualizar os membros: ${erroMembros.message}`)
+  }
+
+  revalidatePath('/tasks', 'layout')
+  return sucesso({ ...(data as Omit<Equipe, 'membros'>), membros: lista.sort() }, id ? 'Equipe salva.' : 'Equipe criada.')
+}
+
+export async function excluirEquipe(equipeId: unknown): Promise<Resultado> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const bloqueio = somenteAdmin(ctx)
+  if (bloqueio) return falha(bloqueio)
+
+  const parsed = uuid.safeParse(equipeId)
+  if (!parsed.success) return falha('Equipe inválida.')
+
+  const { error } = await ctx.supabase.from('equipes').delete().eq('id', parsed.data)
+  if (error) return falha(`Erro ao excluir: ${error.message}`)
+  revalidatePath('/tasks', 'layout')
+  return sucesso(null, 'Equipe excluída.')
+}
+
+/** Define (ou tira) o gestor direto de alguém — o que desenha o organograma. */
+export async function definirGestor(input: unknown): Promise<Resultado<{ email: string; gestor_email: string | null }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const bloqueio = somenteAdmin(ctx)
+  if (bloqueio) return falha(bloqueio)
+
+  const parsed = gestorSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { email, gestor_email } = parsed.data
+
+  if (!(await pessoaAtiva(ctx, email))) return falha('Pessoa não encontrada.')
+  const problema = await gestorValido(ctx, email, gestor_email)
+  if (problema) return falha(problema)
+
+  const { error } = await ctx.supabase
+    .from('colaboradores_perfis')
+    .upsert({ email, gestor_email }, { onConflict: 'email' })
+  if (error) return falha(`Erro ao salvar: ${error.message}`)
+
+  revalidatePath('/tasks', 'layout')
+  return sucesso({ email, gestor_email })
+}
+
+/** Cargo, gestor e equipes de uma pessoa, editados pelo administrador. */
+export async function salvarPessoaAdmin(input: unknown): Promise<Resultado<{ email: string; cargo: string | null; gestor_email: string | null; equipes: string[] }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const bloqueio = somenteAdmin(ctx)
+  if (bloqueio) return falha(bloqueio)
+
+  const parsed = pessoaAdminSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { email, cargo, gestor_email, equipes } = parsed.data
+
+  if (!(await pessoaAtiva(ctx, email))) return falha('Pessoa não encontrada.')
+  const problema = await gestorValido(ctx, email, gestor_email)
+  if (problema) return falha(problema)
+
+  const { error } = await ctx.supabase
+    .from('colaboradores_perfis')
+    .upsert({ email, cargo: cargo || null, gestor_email }, { onConflict: 'email' })
+  if (error) return falha(`Erro ao salvar: ${error.message}`)
+
+  const erroEquipes = await trocarEquipesDe(ctx, email, equipes)
+  if (erroEquipes) return falha(`Erro ao atualizar as equipes: ${erroEquipes}`)
+
+  revalidatePath('/tasks', 'layout')
+  return sucesso({ email, cargo: cargo || null, gestor_email, equipes: [...new Set(equipes)] }, 'Pessoa atualizada.')
 }

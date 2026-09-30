@@ -89,6 +89,7 @@ aplique só as migrations que faltam, em ordem, de `supabase/migrations/`:
 | `0006_tasks.sql` | Módulo Tasks: espaços, listas, tarefas, anexos (bucket privado) e a estrutura inicial |
 | `0007_clickup_ids.sql` | Ids de origem para importar do ClickUp sem duplicar |
 | `0008_tasks_produtividade.sql` | Tasks: visualização padrão, reunião e links na tarefa, agenda assinável, Google Calendar, presença |
+| `0009_favoritos_perfis_equipes.sql` | Favoritos na barra lateral, perfis com foto (bucket privado `avatares`) e cargo, equipes e organograma |
 
 > **Ordem obrigatória da 0004.** Rode a `0004a`, publique o código com a tela
 > de login, entre no Hub e confirme que funciona — só então rode a `0004b`.
@@ -628,6 +629,32 @@ Migration `0008_tasks_produtividade.sql`.
 - **Exclusão do que está aberto.** Excluir pela barra lateral a lista,
   pasta ou espaço que está na tela leva a pessoa para o nível de cima;
   `app/tasks/not-found.tsx` cobre o resto.
+
+### Favoritos, perfis e equipes
+
+Migration `0009_favoritos_perfis_equipes.sql`.
+
+- **Favoritos.** Estrela no cabeçalho da lista, nas ações do espaço e no
+  menu ⋯ de cada um na barra lateral. Os fixados aparecem numa seção
+  "Favoritos" no topo da barra, por pessoa (`tarefas_favoritos`). O que
+  for apagado some dos favoritos por trigger.
+- **Perfil.** Em `/tasks/preferencias` a pessoa troca a própria foto,
+  o nome e o cargo. A foto é recortada e reduzida no navegador (256 px,
+  JPEG) e sobe por URL assinada para o bucket **privado** `avatares`
+  (2 MB, só imagens); o caminho fica em `colaboradores_perfis`. Para
+  mostrar, o servidor assina URLs de 24 h e as guarda em memória por
+  20 h — ninguém acessa uma foto sem passar pelo Hub. A foto aparece nos
+  avatares do Tasks e no cabeçalho.
+- **Equipes e organograma** (`/tasks/equipes`). Todo colaborador vê;
+  administradores criam equipes (nome, cor, descrição, líder, membros —
+  tabelas `equipes` e `equipe_membros`) e definem cargo, gestor direto e
+  equipes de cada pessoa (aba Pessoas ou o seletor no próprio cartão do
+  organograma). O organograma é a árvore dos gestores, em dois modos:
+  **Clássico** (árvore com conectores, recolher/expandir, zoom e "pular
+  para a pessoa") e **Por níveis**. Quem não tem gestor nem subordinado
+  fica em "Sem gestor definido". O servidor recusa ciclos (alguém virar
+  gestor de quem já está acima dela) e o seletor já nem oferece essas
+  opções.
 
 ---
 

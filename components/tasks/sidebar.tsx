@@ -16,8 +16,10 @@ import {
   Search,
   Settings2,
   SlidersHorizontal,
+  Star,
   Trash2,
   UserRound,
+  Users,
   X,
 } from 'lucide-react'
 
@@ -35,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { podeAdministrarEspaco, podeApagarItem } from '@/lib/tasks/permissoes'
-import type { EspacoComArvore, Lista, PastaComListas } from '@/lib/tasks/types'
+import type { EspacoComArvore, Favorito, Lista, PastaComListas, TipoFavorito } from '@/lib/tasks/types'
 import { cn } from '@/lib/utils'
 
 /**
@@ -161,6 +163,9 @@ function Conteudo() {
         <ItemNav href="/tasks/minhas" icone={UserRound} ativo={pathname.startsWith('/tasks/minhas')}>
           Minhas tarefas
         </ItemNav>
+        <ItemNav href="/tasks/equipes" icone={Users} ativo={pathname.startsWith('/tasks/equipes')}>
+          Equipes
+        </ItemNav>
         <form action="/tasks/busca" className="relative px-1 pt-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -172,6 +177,8 @@ function Conteudo() {
           />
         </form>
       </nav>
+
+      <Favoritos pathname={pathname} />
 
       <div className="flex items-center justify-between px-3 pt-3 pb-1">
         <span className="rotulo">Espaços</span>
@@ -293,6 +300,89 @@ function Conteudo() {
   )
 }
 
+interface FavoritoResolvido {
+  tipo: TipoFavorito
+  id: string
+  nome: string
+  cor: string | null
+  href: string
+  subtitulo: string | null
+}
+
+/** Casa os favoritos com a árvore: o que foi apagado (ou a pessoa deixou de ver) some sozinho. */
+function resolverFavoritos(favoritos: Favorito[], arvore: EspacoComArvore[]): FavoritoResolvido[] {
+  const saida: FavoritoResolvido[] = []
+  for (const f of favoritos) {
+    if (f.tipo === 'espaco') {
+      const e = arvore.find((x) => x.id === f.item_id)
+      if (e) saida.push({ tipo: 'espaco', id: e.id, nome: e.nome, cor: e.cor, href: `/tasks/e/${e.id}`, subtitulo: null })
+      continue
+    }
+    for (const e of arvore) {
+      const l = e.listas.find((x) => x.id === f.item_id) ?? e.pastas.flatMap((p) => p.listas).find((x) => x.id === f.item_id)
+      if (l) {
+        saida.push({ tipo: 'lista', id: l.id, nome: l.nome, cor: l.cor, href: `/tasks/l/${l.id}`, subtitulo: e.nome })
+        break
+      }
+    }
+  }
+  return saida
+}
+
+/** Espaços e listas fixados pela pessoa, no topo da barra. Some quando não há nenhum. */
+function Favoritos({ pathname }: { pathname: string }) {
+  const { arvore, favoritos, alternarFavorito } = useTasks()
+  const itens = React.useMemo(() => resolverFavoritos(favoritos, arvore), [favoritos, arvore])
+  if (itens.length === 0) return null
+
+  return (
+    <div className="px-2 pt-2">
+      <div className="flex items-center gap-1.5 px-1 pb-1">
+        <Star className="size-3 fill-current text-warning-foreground dark:text-warning" aria-hidden />
+        <span className="rotulo">Favoritos</span>
+      </div>
+      <ul className="space-y-0.5" aria-label="Favoritos">
+        {itens.map((f) => (
+          <li key={`${f.tipo}-${f.id}`}>
+            <div className={cn(LINHA, 'pl-1', pathname === f.href && 'bg-accent')}>
+              <Link href={f.href} className="flex min-w-0 flex-1 items-center gap-2 py-1 pl-1">
+                {f.tipo === 'espaco' ? (
+                  <MarcaEspaco nome={f.nome} cor={f.cor ?? '#62676f'} />
+                ) : (
+                  <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: f.cor ?? 'var(--muted-foreground)' }} aria-hidden />
+                )}
+                <span className="min-w-0 flex-1 truncate">{f.nome}</span>
+                {f.subtitulo ? <span className="max-w-20 truncate text-[11px] text-muted-foreground">{f.subtitulo}</span> : null}
+              </Link>
+              <button
+                type="button"
+                onClick={() => void alternarFavorito(f.tipo, f.id)}
+                className="flex size-6 shrink-0 items-center justify-center rounded-md text-warning-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-accent focus-visible:opacity-100 dark:text-warning"
+                aria-label={`Remover ${f.nome} dos favoritos`}
+                title="Remover dos favoritos"
+              >
+                <Star className="size-3.5 fill-current" />
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** Item de menu que fixa/solta um espaço ou lista. */
+function ItemFavoritar({ tipo, id }: { tipo: TipoFavorito; id: string }) {
+  const { ehFavorito, alternarFavorito } = useTasks()
+  const fav = ehFavorito(tipo, id)
+  return (
+    <DropdownMenuItem onSelect={() => void alternarFavorito(tipo, id)}>
+      <Star className={cn(fav && 'fill-current text-warning-foreground dark:text-warning')} />
+      {fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+    </DropdownMenuItem>
+  )
+}
+
 /** Quem está com o Tasks aberto agora (presença do Realtime). */
 function OnlineAgora() {
   const { pessoas, colab } = useTasks()
@@ -406,6 +496,7 @@ function EspacoItem({
           {espaco.privado ? <Lock className="size-3 shrink-0 text-muted-foreground" aria-label="Privado" /> : null}
         </Link>
         <BotaoMenu rotulo={`Opções de ${espaco.nome}`}>
+          <ItemFavoritar tipo="espaco" id={espaco.id} />
           <DropdownMenuItem onSelect={() => onDialogo({ tipo: 'lista', espacoId: espaco.id, pastaId: null })}>
             <ListPlus />
             Nova lista
@@ -585,6 +676,7 @@ function ListaItem({
           ) : null}
         </Link>
         <BotaoMenu rotulo={`Opções de ${lista.nome}`}>
+          <ItemFavoritar tipo="lista" id={lista.id} />
           <DropdownMenuItem onSelect={() => onDialogo({ tipo: 'lista', espacoId: lista.espaco_id, lista })}>
             <Pencil />
             Editar lista

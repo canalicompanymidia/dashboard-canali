@@ -5,6 +5,8 @@ import { CanaliLogo } from '@/components/layout/canali-logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { getColaborador } from '@/lib/auth'
+import { getAvatarDe } from '@/lib/tasks/data'
+import { corDaPessoa, iniciais } from '@/lib/tasks/pessoas'
 import { formatDate, primeiroNome } from '@/lib/utils'
 
 export async function SiteHeader() {
@@ -13,6 +15,7 @@ export async function SiteHeader() {
   // a mesma tela. O papel também decide: colaborador comum não vê o
   // atalho de um painel que não pode abrir.
   const colaborador = await getColaborador()
+  const avatar = colaborador ? await getAvatarDe(colaborador.email) : null
 
   return (
     // Barra sempre em marinho-900, nos dois temas: é a assinatura das
@@ -37,10 +40,26 @@ export async function SiteHeader() {
           <span className="mr-2 hidden text-xs text-[#a3a8b0] lg:block tabular">
             {formatDate(new Date())}
           </span>
-          {colaborador?.nome ? (
-            <span className="mr-1 hidden text-[13px] text-[#c9cdd3] md:block">
-              {primeiroNome(colaborador.nome)}
-            </span>
+          {colaborador ? (
+            <Link
+              href="/tasks/preferencias"
+              className="mr-1 flex items-center gap-2 rounded-full py-0.5 pr-2 pl-0.5 text-[13px] text-[#c9cdd3] hover:bg-marinho-700 hover:text-white"
+              title="Seu perfil e preferências"
+            >
+              <span
+                className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold text-white ring-2 ring-[#2c3a55]"
+                style={{ backgroundColor: corDaPessoa(colaborador.email) }}
+                aria-hidden
+              >
+                {avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- URL assinada e temporária.
+                  <img src={avatar} alt="" className="size-full object-cover" />
+                ) : (
+                  iniciais(colaborador.nome || colaborador.email)
+                )}
+              </span>
+              {colaborador.nome ? <span className="hidden md:block">{primeiroNome(colaborador.nome)}</span> : null}
+            </Link>
           ) : null}
 
           {/* O botão "Painel" saiu: a marca à esquerda já leva para a Home. */}

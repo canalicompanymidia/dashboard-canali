@@ -223,3 +223,47 @@ const diaISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')
 export const periodoSchema = z
   .object({ inicio: diaISO, fim: diaISO })
   .refine((p) => p.inicio <= p.fim, { message: 'Período invertido.' })
+
+// ---------------------------------------------------------------------------
+//  Favoritos, perfil e equipes
+// ---------------------------------------------------------------------------
+
+export const favoritoSchema = z.object({
+  tipo: z.enum(['espaco', 'lista']),
+  item_id: uuid,
+})
+
+export const perfilSchema = z.object({
+  nome: nomeCurto('seu nome'),
+  cargo: z.string().trim().max(80, { message: 'Cargo com no máximo 80 caracteres.' }).nullable().default(null),
+})
+
+export const avatarPedidoSchema = z.object({
+  tipo_mime: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  tamanho: z.number().int().positive().max(2 * 1024 * 1024, { message: 'A foto precisa ter até 2 MB.' }),
+})
+
+export const avatarRegistroSchema = z.object({
+  caminho: z.string().min(1).max(300),
+})
+
+export const equipeSchema = z.object({
+  id: uuid.optional(),
+  nome: nomeCurto('o nome da equipe'),
+  cor,
+  descricao: z.string().trim().max(300).nullable().default(null),
+  lider_email: email.nullable().default(null),
+  membros: z.array(email).max(200).default([]),
+})
+
+export const gestorSchema = z.object({
+  email,
+  gestor_email: email.nullable().default(null),
+})
+
+export const pessoaAdminSchema = z.object({
+  email,
+  cargo: z.string().trim().max(80).nullable().default(null),
+  gestor_email: email.nullable().default(null),
+  equipes: z.array(uuid).max(50).default([]),
+})

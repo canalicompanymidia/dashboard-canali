@@ -4,11 +4,12 @@ import * as React from 'react'
 import { CalendarCheck, CalendarPlus, Check, Copy, ExternalLink, Loader2, RefreshCw, ShieldCheck, Unplug } from 'lucide-react'
 
 import { obterPreferencias, renovarAgenda, salvarGoogleIcs } from '@/app/tasks/actions'
+import { PerfilCard } from '@/components/tasks/perfil'
 import { useAcao } from '@/components/tasks/use-acao'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { PreferenciasTasks } from '@/lib/tasks/types'
+import type { Equipe, Pessoa, PreferenciasTasks } from '@/lib/tasks/types'
 
 /**
  * Preferências pessoais do Tasks:
@@ -17,7 +18,15 @@ import type { PreferenciasTasks } from '@/lib/tasks/types'
  *   • o endereço iCal secreto do Google Calendar dela, para o Tasks
  *     mostrar as reuniões do dia no Início.
  */
-export function PreferenciasView() {
+export function PreferenciasView({
+  pessoa,
+  equipes,
+  gestorNome,
+}: {
+  pessoa: Pessoa
+  equipes: Equipe[]
+  gestorNome: string | null
+}) {
   const [pref, setPref] = React.useState<PreferenciasTasks | null>(null)
   const [erroCarga, setErroCarga] = React.useState<string | null>(null)
 
@@ -33,20 +42,22 @@ export function PreferenciasView() {
     }
   }, [])
 
-  if (erroCarga) return <p className="mt-6 text-sm text-destructive">{erroCarga}</p>
-  if (!pref) {
-    return (
-      <div className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        Carregando…
-      </div>
-    )
-  }
-
   return (
     <div className="mt-6 space-y-5">
-      <AgendaAssinavel pref={pref} setPref={setPref} />
-      <GoogleCalendar pref={pref} setPref={setPref} />
+      <PerfilCard pessoa={pessoa} equipes={equipes} gestorNome={gestorNome} />
+      {erroCarga ? (
+        <p className="text-sm text-destructive">{erroCarga}</p>
+      ) : !pref ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Carregando integrações…
+        </div>
+      ) : (
+        <>
+          <AgendaAssinavel pref={pref} setPref={setPref} />
+          <GoogleCalendar pref={pref} setPref={setPref} />
+        </>
+      )}
     </div>
   )
 }

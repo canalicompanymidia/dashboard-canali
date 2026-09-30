@@ -9,14 +9,16 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import { hojeISO } from './datas'
 import { podeVerEspaco } from './permissoes'
 import { enderecoGoogleValido, extrairEventos, type EventoAgenda } from './ics'
-import { BUCKET_ANEXOS } from './types'
+import { BUCKET_ANEXOS, BUCKET_AVATARES } from './types'
 import type {
   Anexo,
   Atividade,
   Campo,
   Comentario,
+  Equipe,
   Espaco,
   EspacoComArvore,
+  Favorito,
   ItemChecklist,
   Lista,
   ListaContexto,
@@ -57,23 +59,124 @@ export async function tasksDisponivel(): Promise<boolean> {
 //  Pessoas
 // ---------------------------------------------------------------------------
 
-/** Colaboradores ativos — os únicos que podem ser responsáveis por algo. Uma leitura por requisição. */
+/**
+ * Fotos de perfil: o bucket é privado, então cada caminho vira uma URL
+ * assinada de 24 h. A URL fica em memória por 20 h para o navegador
+ * reaproveitar o cache da imagem entre uma página e outra.
+ */
+const VALIDADE_URL_AVATAR = 24 * 60 * 60
+const cacheAvatares = new Map<string, { url: string; ate: number }>()
+
+async function urlsDeAvatares(supabase: NonNullable<ReturnType<typeof db>>, caminhos: string[]): Promise<Map<string, string>> {
+  const saida = new Map<string, string>()
+  const faltam: string[] = []
+  const agora = Date.now()
+  for (const c of new Set(caminhos)) {
+    const guardada = cacheAvatares.get(c)
+    if (guardada && guardada.ate > agora) saida.set(c, guardada.url)
+    else faltam.push(c)
+  }
+  if (faltam.length > 0) {
+    const { data } = await supabase.storage.from(BUCKET_AVATARES).createSignedUrls(faltam, VALIDADE_URL_AVATAR)
+    for (const item of data ?? []) {
+      if (item.path && item.signedUrl) {
+        cacheAvatares.set(item.path, { url: item.signedUrl, ate: agora + 20 * 60 * 60 * 1000 })
+        saida.set(item.path, item.signedUrl)
+      }
+    }
+  }
+  return saida
+}
+
+/** Depois de trocar ou apagar a foto, a URL antiga não serve mais. */
+export function esquecerAvatar(caminho: string) {
+  cacheAvatares.delete(caminho)
+}
+
+interface PerfilLinha {
+  email: string
+  avatar_path: string | null
+  cargo: string | null
+  gestor_email: string | null
+}
+
+/** Colaboradores ativos, com perfil — os únicos que podem ser responsáveis por algo. Uma leitura por requisição. */
 export const getPessoas = cache(async (): Promise<Pessoa[]> => {
   const supabase = db()
   if (!supabase) return []
 
-  const { data, error } = await supabase
-    .from('colaboradores_autorizados')
-    .select('email, nome, papel')
-    .eq('ativo', true)
-    .order('nome', { ascending: true, nullsFirst: false })
-
+  const [{ data, error }, { data: perfis }] = await Promise.all([
+    supabase
+      .from('colaboradores_autorizados')
+      .select('email, nome, papel')
+      .eq('ativo', true)
+      .order('nome', { ascending: true, nullsFirst: false }),
+    // Sem a migration 0009 a tabela não existe: perfis vem null e todo mundo fica sem foto.
+    supabase.from('colaboradores_perfis').select('email, avatar_path, cargo, gestor_email'),
+  ])
   if (error || !data) return []
 
-  return data.map((linha) => ({
-    email: String(linha.email).toLowerCase(),
-    nome: (linha.nome as string | null) ?? null,
-    papel: linha.papel === 'admin' ? 'admin' : 'colaborador',
+  const porEmail = new Map<string, PerfilLinha>()
+  for (const p of (perfis ?? []) as PerfilLinha[]) porEmail.set(String(p.email).toLowerCase(), p)
+  const caminhos = [...porEmail.values()].map((p) => p.avatar_path).filter((c): c is string => Boolean(c))
+  const urls = caminhos.length > 0 ? await urlsDeAvatares(supabase, caminhos) : new Map<string, string>()
+
+  return data.map((linha) => {
+    const email = String(linha.email).toLowerCase()
+    const perfil = porEmail.get(email)
+    return {
+      email,
+      nome: (linha.nome as string | null) ?? null,
+      papel: linha.papel === 'admin' ? 'admin' : 'colaborador',
+      avatar_url: perfil?.avatar_path ? (urls.get(perfil.avatar_path) ?? null) : null,
+      cargo: perfil?.cargo ?? null,
+      gestor_email: perfil?.gestor_email ? String(perfil.gestor_email).toLowerCase() : null,
+    }
+  })
+})
+
+/** Só a foto de uma pessoa (o cabeçalho do Hub usa). Uma leitura por requisição. */
+export const getAvatarDe = cache(async (email: string): Promise<string | null> => {
+  const supabase = db()
+  if (!supabase) return null
+  const { data } = await supabase.from('colaboradores_perfis').select('avatar_path').eq('email', email.toLowerCase()).maybeSingle()
+  const caminho = (data?.avatar_path as string | null) ?? null
+  if (!caminho) return null
+  return (await urlsDeAvatares(supabase, [caminho])).get(caminho) ?? null
+})
+
+/** Espaços e listas que a pessoa fixou, na ordem em que fixou. */
+export async function getFavoritos(email: string): Promise<Favorito[]> {
+  const supabase = db()
+  if (!supabase) return []
+  const { data } = await supabase
+    .from('tarefas_favoritos')
+    .select('tipo, item_id')
+    .eq('email', email.toLowerCase())
+    .order('created_at')
+  return ((data ?? []) as { tipo: string; item_id: string }[])
+    .filter((f) => f.tipo === 'espaco' || f.tipo === 'lista')
+    .map((f) => ({ tipo: f.tipo as Favorito['tipo'], item_id: f.item_id }))
+}
+
+/** Equipes com os membros. */
+export const getEquipes = cache(async (): Promise<Equipe[]> => {
+  const supabase = db()
+  if (!supabase) return []
+  const [{ data: equipes }, { data: membros }] = await Promise.all([
+    supabase.from('equipes').select('*').order('posicao').order('nome'),
+    supabase.from('equipe_membros').select('equipe_id, email'),
+  ])
+  const porEquipe = new Map<string, string[]>()
+  for (const m of (membros ?? []) as { equipe_id: string; email: string }[]) {
+    const lista = porEquipe.get(m.equipe_id) ?? []
+    lista.push(String(m.email).toLowerCase())
+    porEquipe.set(m.equipe_id, lista)
+  }
+  return ((equipes ?? []) as Omit<Equipe, 'membros'>[]).map((e) => ({
+    ...e,
+    lider_email: e.lider_email ? String(e.lider_email).toLowerCase() : null,
+    membros: (porEquipe.get(e.id) ?? []).sort(),
   }))
 })
 

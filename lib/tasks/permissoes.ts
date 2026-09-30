@@ -1,4 +1,4 @@
-import type { Pessoa } from './types'
+import type { Identidade } from './types'
 
 /**
  * Regras de acesso do módulo Tasks — puras, sem banco. As Server Actions
@@ -19,19 +19,19 @@ export interface EspacoAcesso {
   membros: string[]
 }
 
-export function podeVerEspaco(colab: Pessoa, espaco: EspacoAcesso): boolean {
+export function podeVerEspaco(colab: Identidade, espaco: EspacoAcesso): boolean {
   if (!espaco.privado) return true
   if (colab.papel === 'admin') return true
   if (espaco.criado_por === colab.email) return true
   return espaco.membros.includes(colab.email)
 }
 
-export function podeAdministrarEspaco(colab: Pessoa, espaco: EspacoAcesso): boolean {
+export function podeAdministrarEspaco(colab: Identidade, espaco: EspacoAcesso): boolean {
   return colab.papel === 'admin' || espaco.criado_por === colab.email
 }
 
 export function podeApagarItem(
-  colab: Pessoa,
+  colab: Identidade,
   item: { criado_por: string | null },
   espaco: EspacoAcesso,
 ): boolean {
@@ -42,10 +42,10 @@ export function podeApagarItem(
   )
 }
 
-export function podeEditarComentario(colab: Pessoa, autor: string): boolean {
+export function podeEditarComentario(colab: Identidade, autor: string): boolean {
   return autor === colab.email
 }
 
-export function podeApagarComentario(colab: Pessoa, autor: string): boolean {
+export function podeApagarComentario(colab: Identidade, autor: string): boolean {
   return colab.papel === 'admin' || autor === colab.email
 }

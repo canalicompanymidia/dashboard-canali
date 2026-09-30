@@ -203,11 +203,43 @@ export interface PreferenciasTasks {
 }
 
 /** Colaborador do Hub, como aparece nos seletores de responsável. */
-export interface Pessoa {
+/** O mínimo para decidir permissões: quem é e que papel tem. */
+export interface Identidade {
   email: string
   nome: string | null
   papel: 'admin' | 'colaborador'
 }
+
+/** Uma pessoa do time, com o perfil (foto, cargo, gestor). */
+export interface Pessoa extends Identidade {
+  /** URL assinada da foto (vale por horas), ou null para mostrar as iniciais. */
+  avatar_url: string | null
+  cargo: string | null
+  /** E-mail do gestor direto (organograma), ou null. */
+  gestor_email: string | null
+}
+
+export type TipoFavorito = 'espaco' | 'lista'
+
+/** Um espaço ou lista fixado na barra lateral da pessoa. */
+export interface Favorito {
+  tipo: TipoFavorito
+  item_id: string
+}
+
+export interface Equipe {
+  id: string
+  nome: string
+  cor: string
+  descricao: string | null
+  lider_email: string | null
+  posicao: number
+  criado_por: string | null
+  membros: string[]
+}
+
+/** Bucket privado das fotos de perfil. Só o servidor gera URLs. */
+export const BUCKET_AVATARES = 'avatares'
 
 /** Tudo que o modal da tarefa precisa, numa única carga. */
 export interface TarefaDetalhe {

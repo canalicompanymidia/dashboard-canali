@@ -5,6 +5,7 @@ import { Check, Flag, type LucideIcon } from 'lucide-react'
 
 import { useOnline } from '@/components/tasks/presenca'
 import { useTasks } from '@/components/tasks/provider'
+import { corDaPessoa, iniciais } from '@/lib/tasks/pessoas'
 import { formatarDataCurta, hojeISO } from '@/lib/tasks/datas'
 import {
   PRIORIDADES,
@@ -38,29 +39,7 @@ export function corTexto(hex: string): string {
   return lum > 0.6 ? '#0a0b0d' : '#ffffff'
 }
 
-const CORES_PESSOA = [
-  '#1f6feb', '#7b2cbf', '#008844', '#bf55ec', '#e5484d', '#ff7800',
-  '#1090e0', '#3db88b', '#f8ae00', '#1f3864', '#9b59b6', '#ef233c',
-]
-
-/** Cor estável para uma pessoa, derivada do e-mail. */
-export function corDaPessoa(email: string): string {
-  let h = 0
-  for (let i = 0; i < email.length; i++) h = (h * 31 + email.charCodeAt(i)) >>> 0
-  return CORES_PESSOA[h % CORES_PESSOA.length]
-}
-
-/** "Bruna Dumbrovsky Casaes" → "BC"; "fabi@x.com" → "FA". */
-export function iniciais(nomeOuEmail: string): string {
-  const texto = nomeOuEmail.trim()
-  if (!texto) return '?'
-  if (texto.includes('@') && !texto.includes(' ')) {
-    return texto.slice(0, 2).toUpperCase()
-  }
-  const partes = texto.split(/\s+/).filter(Boolean)
-  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
-}
+export { corDaPessoa, iniciais } from '@/lib/tasks/pessoas'
 
 // ---------------------------------------------------------------------------
 //  Status
@@ -166,9 +145,10 @@ export function Avatar({
   tamanho?: 'xs' | 'sm' | 'md' | 'lg'
   className?: string
 }) {
-  const { nomeDe } = useTasks()
+  const { nomeDe, pessoa } = useTasks()
   const online = useOnline(email)
   const nome = nomeDe(email)
+  const foto = pessoa(email)?.avatar_url ?? null
   return (
     <span
       className={cn(
@@ -182,7 +162,12 @@ export function Avatar({
       style={{ backgroundColor: corDaPessoa(email) }}
       title={`${nome === email ? email : `${nome} · ${email}`}${online ? ' · online agora' : ''}`}
     >
-      {iniciais(nome)}
+      {foto ? (
+        // eslint-disable-next-line @next/next/no-img-element -- URL assinada e temporária; o otimizador do Next não serve.
+        <img src={foto} alt="" className="size-full rounded-full object-cover" loading="lazy" draggable={false} />
+      ) : (
+        iniciais(nome)
+      )}
       {online ? (
         <span
           className={cn(

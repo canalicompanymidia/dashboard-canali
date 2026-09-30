@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { FolderPlus, ListPlus, MoreHorizontal, Pencil, Settings2, Trash2 } from 'lucide-react'
+import { FolderPlus, ListPlus, MoreHorizontal, Pencil, Settings2, Star, Trash2 } from 'lucide-react'
 
 import { excluirEspaco, excluirPasta } from '@/app/tasks/actions'
 import { ConfirmarExclusao, EspacoDialog, ListaDialog, PastaDialog } from '@/components/tasks/dialogs'
@@ -11,13 +11,15 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { podeAdministrarEspaco, podeApagarItem } from '@/lib/tasks/permissoes'
 import type { EspacoComArvore, PastaComListas } from '@/lib/tasks/types'
+import { cn } from '@/lib/utils'
 
 /** Botões da visão geral do espaço: nova lista, nova pasta, configurar, excluir. */
 export function EspacoAcoes({ espaco }: { espaco: EspacoComArvore }) {
   const router = useRouter()
-  const { colab } = useTasks()
+  const { colab, ehFavorito, alternarFavorito } = useTasks()
   const [dialogo, setDialogo] = React.useState<'lista' | 'pasta' | 'config' | 'excluir' | null>(null)
   const admin = podeAdministrarEspaco(colab, espaco)
+  const favorito = ehFavorito('espaco', espaco.id)
 
   return (
     <>
@@ -28,6 +30,16 @@ export function EspacoAcoes({ espaco }: { espaco: EspacoComArvore }) {
       <Button size="sm" variant="outline" onClick={() => setDialogo('pasta')}>
         <FolderPlus className="size-4" />
         <span className="hidden sm:inline">Pasta</span>
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => void alternarFavorito('espaco', espaco.id)}
+        aria-label={favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        aria-pressed={favorito}
+        title={favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+      >
+        <Star className={cn('size-4', favorito && 'fill-current text-warning-foreground dark:text-warning')} />
       </Button>
       {admin ? (
         <DropdownMenu>
