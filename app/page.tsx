@@ -112,6 +112,18 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
           Automações
           <ArrowUpRight className="size-3.5" />
         </a>
+        {/* Painel de Webinários: artifact do claude.ai com o acompanhamento
+            semanal dos funis Loja Pronta, SellerUp e High Ticket. Também
+            abre fora do Hub, por isso leva a mesma seta. */}
+        <a
+          href="https://claude.ai/artifact/HdBUfbgViBGp6FvwoJmte7"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
+        >
+          Webinários
+          <ArrowUpRight className="size-3.5" />
+        </a>
 
         <span className="rounded-md border border-border bg-card px-3 py-1.5 font-medium tabular">
           {year}
