@@ -36,9 +36,17 @@ export const getEmailLogado = cache(async (): Promise<string | null> => {
   const supabase = await getSupabaseServerClient()
   if (!supabase) return null
 
-  // getUser() valida o token no servidor de auth. getSession() só lê o
-  // cookie, que o próprio cliente poderia forjar — não serve para decidir
-  // acesso.
+  // getClaims() confere a ASSINATURA do token localmente (chave pública
+  // do projeto, em cache), sem uma ida ao servidor de auth a cada página —
+  // era o passo mais lento de cada clique. Cookie forjado ou vencido
+  // reprova igual. getSession() sozinho não serviria: só lê o cookie.
+  // Quem decide o acesso continua sendo a lista de colaboradores, lida do
+  // banco logo depois.
+  const { data: claims, error: erroClaims } = await supabase.auth.getClaims()
+  const emailDoToken = !erroClaims && typeof claims?.claims?.email === 'string' ? claims.claims.email : null
+  if (emailDoToken) return emailDoToken.toLowerCase()
+
+  // Sem verificação local possível (token em formato antigo): checa no servidor de auth.
   const { data, error } = await supabase.auth.getUser()
   if (error || !data.user?.email) return null
 

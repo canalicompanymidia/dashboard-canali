@@ -21,10 +21,11 @@ export default async function ListaPage({
   const colab = await requireColaborador()
   const [{ id }, { view }, jar] = await Promise.all([params, searchParams, cookies()])
 
-  const contexto = await getListaContexto(id, colab)
+  // As duas leituras em paralelo: as tarefas só aparecem se o contexto
+  // confirmar que a pessoa enxerga a lista.
+  const [contexto, tarefasLidas] = await Promise.all([getListaContexto(id, colab), getTarefasDaLista(id)])
   if (!contexto) notFound()
-
-  const tarefas = await getTarefasDaLista(contexto.lista.id)
+  const tarefas = tarefasLidas
 
   // ?view → a última aba desta pessoa nesta lista → padrão da lista →
   // padrão do espaço → Quadro.
