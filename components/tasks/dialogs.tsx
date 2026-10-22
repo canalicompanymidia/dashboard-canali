@@ -531,9 +531,14 @@ export function NovaTarefaDialog({
   const [descricao, setDescricao] = React.useState<string | null>(null)
   // Remonta o editor a cada abertura, para começar vazio.
   const [versaoEditor, setVersaoEditor] = React.useState(0)
+  // Limpa o formulário só quando o diálogo ABRE — nunca porque os dados da
+  // tela de baixo foram recarregados com ele aberto.
+  const estavaAberto = React.useRef(false)
 
   React.useEffect(() => {
-    if (!aberto) return
+    const abriuAgora = aberto && !estavaAberto.current
+    estavaAberto.current = aberto
+    if (!abriuAgora) return
     setVersaoEditor((v) => v + 1)
     setTitulo('')
     setLista(listaId ?? primeiraLista(arvore) ?? '')

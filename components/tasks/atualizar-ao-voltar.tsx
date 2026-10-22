@@ -19,6 +19,10 @@ export function AtualizarAoVoltar() {
     function aoMudar() {
       if (document.visibilityState !== 'visible') return
       if (Date.now() - ultima.current < INTERVALO_MS) return
+      // Janela aberta (nova tarefa, edição, escolher arquivo/imagem): não
+      // recarrega por baixo, senão o que a pessoa estava escrevendo some.
+      // Escolher um arquivo tira o foco da aba, e a volta disparava isto.
+      if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) return
       ultima.current = Date.now()
       router.refresh()
     }
