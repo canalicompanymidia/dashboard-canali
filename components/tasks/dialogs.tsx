@@ -13,6 +13,7 @@ import {
   criarTarefa,
   renomearPasta,
 } from '@/app/tasks/actions'
+import { EditorTexto } from '@/components/tasks/editor-texto'
 import { Avatar } from '@/components/tasks/pecas'
 import { CorPicker, DataPicker, PessoasPicker, PrioridadePicker, StatusPicker } from '@/components/tasks/pickers'
 import { useTasks } from '@/components/tasks/provider'
@@ -527,17 +528,20 @@ export function NovaTarefaDialog({
   const [responsaveis, setResponsaveis] = React.useState<string[]>([])
   const [prioridade, setPrioridade] = React.useState<Prioridade | null>(null)
   const [vencimento, setVencimento] = React.useState<string | null>(null)
-  const [descricao, setDescricao] = React.useState('')
+  const [descricao, setDescricao] = React.useState<string | null>(null)
+  // Remonta o editor a cada abertura, para começar vazio.
+  const [versaoEditor, setVersaoEditor] = React.useState(0)
 
   React.useEffect(() => {
     if (!aberto) return
+    setVersaoEditor((v) => v + 1)
     setTitulo('')
     setLista(listaId ?? primeiraLista(arvore) ?? '')
     setStatusId(padrao?.status_id ?? '')
     setResponsaveis([])
     setPrioridade(null)
     setVencimento(padrao?.data_vencimento ?? null)
-    setDescricao('')
+    setDescricao(null)
     limpar()
   }, [aberto, listaId, padrao, arvore, limpar])
 
@@ -552,7 +556,7 @@ export function NovaTarefaDialog({
         prioridade,
         data_vencimento: vencimento,
         responsaveis,
-        descricao: descricao.trim() || null,
+        descricao,
       }),
     )
     if (criada) {
@@ -565,7 +569,7 @@ export function NovaTarefaDialog({
 
   return (
     <Dialog open={aberto} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{padrao?.pai_id ? 'Nova subtarefa' : 'Nova tarefa'}</DialogTitle>
         </DialogHeader>
@@ -627,11 +631,14 @@ export function NovaTarefaDialog({
             ) : null}
           </div>
 
-          <Textarea
-            value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
-            placeholder="Descrição (opcional)"
-            className="min-h-20"
+          <EditorTexto
+            key={versaoEditor}
+            valor={null}
+            onChange={setDescricao}
+            destinoImagem={lista ? { lista_id: lista } : null}
+            placeholder="Descrição (opcional) — dá para colar imagens"
+            className="border-input"
+            minHeight="min-h-20"
           />
 
           <Erro texto={erro} />

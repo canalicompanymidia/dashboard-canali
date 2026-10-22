@@ -90,7 +90,7 @@ export async function middleware(request: NextRequest) {
     login.pathname = '/login'
     login.search = ''
     // Guarda o destino para devolver a pessoa onde ela queria chegar.
-    if (pathname !== '/') login.searchParams.set('destino', pathname)
+    if (pathname !== '/') login.searchParams.set('destino', pathname + request.nextUrl.search)
     return NextResponse.redirect(login)
   }
 

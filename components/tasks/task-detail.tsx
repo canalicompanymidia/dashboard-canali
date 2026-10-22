@@ -43,7 +43,9 @@ import {
   pedirUploadDeAnexo,
   registrarAnexo,
 } from '@/app/tasks/actions'
+import { BotaoCopiarLink, ItensCompartilhar } from '@/components/tasks/compartilhar'
 import { ConfirmarExclusao, listasDaArvore } from '@/components/tasks/dialogs'
+import { EditorTexto } from '@/components/tasks/editor-texto'
 import { Gravador } from '@/components/tasks/gravador'
 import { LinksDaTarefa, ReuniaoDaTarefa } from '@/components/tasks/links-tarefa'
 import {
@@ -261,6 +263,7 @@ export function Detalhe({
           ) : null}
         </nav>
 
+        <BotaoCopiarLink caminho={`/tasks/t/${tarefa.id}`} rotulo="Copiar link da tarefa" />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label="Mais opções">
@@ -268,6 +271,8 @@ export function Detalhe({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
+            <ItensCompartilhar caminho={`/tasks/t/${tarefa.id}`} titulo={tarefa.titulo} />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={async () => {
                 const copia = await executar(() => duplicarTarefa(tarefa.id))
@@ -316,7 +321,7 @@ export function Detalhe({
 
             <Propriedades detalhe={detalhe} salvar={salvarComHistorico} />
 
-            <Descricao valor={tarefa.descricao} onSalvar={(d) => salvarComHistorico({ descricao: d })} />
+            <Descricao tarefaId={tarefa.id} valor={tarefa.descricao} onSalvar={(d) => salvarComHistorico({ descricao: d })} />
 
             <LinksDaTarefa links={tarefa.links ?? []} onChange={(links) => salvarComHistorico({ links })} />
 
@@ -598,15 +603,26 @@ function Propriedades({ detalhe, salvar }: { detalhe: TarefaDetalhe; salvar: (p:
 //  Descrição
 // ---------------------------------------------------------------------------
 
-function Descricao({ valor, onSalvar }: { valor: string | null; onSalvar: (d: string | null) => Promise<unknown> }) {
-  const [texto, setTexto] = React.useState(valor ?? '')
+function Descricao({
+  tarefaId,
+  valor,
+  onSalvar,
+}: {
+  tarefaId: string
+  valor: string | null
+  onSalvar: (d: string | null) => Promise<unknown>
+}) {
   const [estado, setEstado] = React.useState<'ocioso' | 'salvando' | 'salvo'>('ocioso')
-  React.useEffect(() => setTexto(valor ?? ''), [valor])
+  const ultimo = React.useRef(valor)
+  React.useEffect(() => {
+    ultimo.current = valor
+  }, [valor])
 
-  async function confirmar() {
-    if ((texto.trim() || null) === (valor ?? null) && texto === (valor ?? '')) return
+  async function confirmar(html: string | null) {
+    if ((html ?? '') === (ultimo.current ?? '')) return
+    ultimo.current = html
     setEstado('salvando')
-    await onSalvar(texto.trim() ? texto : null)
+    await onSalvar(html)
     setEstado('salvo')
     setTimeout(() => setEstado('ocioso'), 1500)
   }
@@ -619,12 +635,11 @@ function Descricao({ valor, onSalvar }: { valor: string | null; onSalvar: (d: st
           {estado === 'salvando' ? 'Salvando…' : estado === 'salvo' ? 'Salvo' : ''}
         </span>
       </div>
-      <Textarea
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        onBlur={confirmar}
-        placeholder="Escreva o contexto, o briefing, os links… Salva ao sair do campo."
-        className="min-h-24 border-transparent bg-transparent px-2 leading-relaxed hover:border-border focus-visible:border-ring"
+      <EditorTexto
+        valor={valor}
+        onBlur={(html) => void confirmar(html)}
+        destinoImagem={{ tarefa_id: tarefaId }}
+        placeholder="Escreva o contexto, o briefing, os links… Cole ou arraste imagens aqui. Salva ao sair do campo."
       />
     </section>
   )

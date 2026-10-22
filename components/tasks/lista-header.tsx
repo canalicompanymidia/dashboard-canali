@@ -5,13 +5,14 @@ import { CalendarDays, List, MoreHorizontal, Pencil, Pin, Plus, Settings2, Squar
 
 import { atualizarLista } from '@/app/tasks/actions'
 
+import { BotaoCopiarLink, ItensCompartilhar } from '@/components/tasks/compartilhar'
 import { ListaDialog, NovaTarefaDialog } from '@/components/tasks/dialogs'
 import { ListaConfigDialog } from '@/components/tasks/lista-config'
 import { useTasks } from '@/components/tasks/provider'
 import { AbasDeVisualizacao, Topbar, type Crumb } from '@/components/tasks/topbar'
 import { useAcao } from '@/components/tasks/use-acao'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { VISUALIZACOES, type ListaContexto, type Visualizacao } from '@/lib/tasks/types'
 import { cn } from '@/lib/utils'
 import { lembrarVisualizacao } from '@/lib/tasks/visualizacao'
@@ -74,6 +75,7 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
           <Plus className="size-4" />
           <span className="hidden sm:inline">Tarefa</span>
         </Button>
+        <BotaoCopiarLink caminho={`${base}?view=${view}`} rotulo="Copiar link desta lista (nesta aba)" />
         <Button
           variant="ghost"
           size="icon-sm"
@@ -94,6 +96,8 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
+            <ItensCompartilhar caminho={`${base}?view=${view}`} titulo={`${espaco.nome} › ${lista.nome}`} />
+            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => setEditar(true)}>
               <Pencil />
               Editar lista

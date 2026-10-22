@@ -22,7 +22,7 @@ export default async function LoginPage({
   const { destino, erro, recuperar } = await searchParams
 
   // Já logado e autorizado: não faz sentido mostrar a tela de login.
-  if (await getColaborador()) redirect(destino?.startsWith('/') ? destino : '/')
+  if (await getColaborador()) redirect(destinoSeguro(destino))
 
   return (
     <div className="hero-surface flex min-h-dvh items-center justify-center px-4 py-10">
@@ -38,7 +38,7 @@ export default async function LoginPage({
 
         <div className="rounded-xl border border-border bg-card p-6">
           {recuperar ? (
-            <RecuperarSessao destino={destino?.startsWith('/') ? destino : '/'} />
+            <RecuperarSessao destino={destinoSeguro(destino)} />
           ) : null}
 
           {erro && ERROS[erro] ? (
@@ -48,7 +48,7 @@ export default async function LoginPage({
             </p>
           ) : null}
 
-          <LoginForm destino={destino} />
+          <LoginForm destino={destinoSeguro(destino)} />
         </div>
 
         <p className="mt-4 flex items-start justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
@@ -58,4 +58,9 @@ export default async function LoginPage({
       </div>
     </div>
   )
+}
+
+/** Só caminho interno: "//outro.site" viraria redirecionamento para fora. */
+function destinoSeguro(destino: string | undefined): string {
+  return destino && destino.startsWith('/') && !destino.startsWith('//') && !destino.startsWith('/\\') ? destino : '/'
 }

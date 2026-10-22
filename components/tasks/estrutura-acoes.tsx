@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { FolderPlus, ListPlus, MoreHorizontal, Pencil, Settings2, Star, Trash2 } from 'lucide-react'
 
 import { excluirEspaco, excluirPasta } from '@/app/tasks/actions'
+import { BotaoCopiarLink, ItensCompartilhar } from '@/components/tasks/compartilhar'
 import { ConfirmarExclusao, EspacoDialog, ListaDialog, PastaDialog } from '@/components/tasks/dialogs'
 import { useTasks } from '@/components/tasks/provider'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,7 @@ export function EspacoAcoes({ espaco }: { espaco: EspacoComArvore }) {
         <FolderPlus className="size-4" />
         <span className="hidden sm:inline">Pasta</span>
       </Button>
+      <BotaoCopiarLink caminho={`/tasks/e/${espaco.id}`} rotulo="Copiar link do espaço" />
       <Button
         variant="ghost"
         size="icon-sm"
@@ -49,6 +51,8 @@ export function EspacoAcoes({ espaco }: { espaco: EspacoComArvore }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
+            <ItensCompartilhar caminho={`/tasks/e/${espaco.id}`} titulo={espaco.nome} />
+            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => setDialogo('config')}>
               <Settings2 />
               Configurar espaço
@@ -102,6 +106,8 @@ export function PastaAcoes({ pasta, espaco }: { pasta: PastaComListas; espaco: E
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          <ItensCompartilhar caminho={`/tasks/p/${pasta.id}`} titulo={`${espaco.nome} › ${pasta.nome}`} />
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setDialogo('renomear')}>
             <Pencil />
             Renomear pasta

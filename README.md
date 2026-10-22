@@ -630,6 +630,25 @@ Migration `0008_tasks_produtividade.sql`.
   pasta ou espaço que está na tela leva a pessoa para o nível de cima;
   `app/tasks/not-found.tsx` cobre o resto.
 
+### Links e descrição com formatação
+
+- **Copiar link / Enviar no WhatsApp.** Ícone de link no cabeçalho da
+  tarefa, da lista (leva a aba aberta) e do espaço, e as opções "Copiar
+  link" e "Enviar no WhatsApp" nos menus ⋯ (inclusive na barra lateral).
+  A tarefa usa `/tasks/t/<id>`. Quem recebe passa pelo login e volta para
+  o mesmo endereço, com a aba (o login agora preserva a query e só aceita
+  destino interno).
+- **Descrição em texto rico** (Tiptap): negrito, itálico, sublinhado,
+  riscado, título, listas, citação, links e imagens no meio do texto
+  (botão, colar ou arrastar), no modal e na criação da tarefa. Imagens
+  são reduzidas no navegador (lado máx. 1600 px) e sobem por URL assinada
+  para `tarefas-anexos/descricao/<espaço>/`, sem virar anexo. A descrição
+  guarda `/api/tasks/imagem?c=…`, rota que confere sessão e acesso ao
+  espaço antes de redirecionar para uma URL assinada. O servidor limpa o
+  HTML antes de gravar (`lib/tasks/sanitizar.ts`: só as tags do editor,
+  imagens só da rota interna, links só http(s)/mailto). Descrições
+  antigas em texto puro continuam abrindo, convertidas em parágrafos.
+
 ### Favoritos, perfis e equipes
 
 Migration `0009_favoritos_perfis_equipes.sql`.

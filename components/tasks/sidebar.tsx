@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 
 import { excluirEspaco, excluirLista, excluirPasta } from '@/app/tasks/actions'
+import { ItensCompartilhar } from '@/components/tasks/compartilhar'
 import { ConfirmarExclusao, EspacoDialog, ListaDialog, PastaDialog } from '@/components/tasks/dialogs'
 import { Avatar, MarcaEspaco } from '@/components/tasks/pecas'
 import { useOnlineTodos } from '@/components/tasks/presenca'
@@ -497,6 +498,8 @@ function EspacoItem({
         </Link>
         <BotaoMenu rotulo={`Opções de ${espaco.nome}`}>
           <ItemFavoritar tipo="espaco" id={espaco.id} />
+          <ItensCompartilhar caminho={`/tasks/e/${espaco.id}`} titulo={espaco.nome} />
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => onDialogo({ tipo: 'lista', espacoId: espaco.id, pastaId: null })}>
             <ListPlus />
             Nova lista
@@ -599,6 +602,8 @@ function PastaItem({
           <span className="truncate">{pasta.nome}</span>
         </Link>
         <BotaoMenu rotulo={`Opções de ${pasta.nome}`}>
+          <ItensCompartilhar caminho={`/tasks/p/${pasta.id}`} titulo={pasta.nome} />
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => onDialogo({ tipo: 'lista', espacoId: espaco.id, pastaId: pasta.id })}>
             <ListPlus />
             Nova lista
@@ -677,6 +682,8 @@ function ListaItem({
         </Link>
         <BotaoMenu rotulo={`Opções de ${lista.nome}`}>
           <ItemFavoritar tipo="lista" id={lista.id} />
+          <ItensCompartilhar caminho={`/tasks/l/${lista.id}`} titulo={lista.nome} />
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => onDialogo({ tipo: 'lista', espacoId: lista.espaco_id, lista })}>
             <Pencil />
             Editar lista

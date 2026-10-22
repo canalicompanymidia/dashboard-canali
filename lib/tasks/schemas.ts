@@ -129,7 +129,7 @@ export const novaTarefaSchema = z.object({
   prioridade: prioridade.default(null),
   data_vencimento: dataISO.default(null),
   responsaveis: z.array(email).max(50).default([]),
-  descricao: z.string().trim().max(20000).nullable().default(null),
+  descricao: z.string().trim().max(100000).nullable().default(null),
 })
 
 /**
@@ -139,7 +139,7 @@ export const novaTarefaSchema = z.object({
 export const patchTarefaSchema = z
   .object({
     titulo: nomeCurto('o título da tarefa', 300).optional(),
-    descricao: z.string().max(20000).nullable().optional(),
+    descricao: z.string().max(100000).nullable().optional(),
     status_id: uuid.optional(),
     prioridade: prioridade.optional(),
     data_inicio: dataISO.optional(),
@@ -267,3 +267,13 @@ export const pessoaAdminSchema = z.object({
   gestor_email: email.nullable().default(null),
   equipes: z.array(uuid).max(50).default([]),
 })
+
+/** Imagem colada na descrição: o espaço vem da tarefa (edição) ou da lista (criação). */
+export const imagemDescricaoSchema = z
+  .object({
+    tarefa_id: uuid.optional(),
+    lista_id: uuid.optional(),
+    tipo_mime: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+    tamanho: z.number().int().positive().max(10 * 1024 * 1024, { message: 'A imagem precisa ter até 10 MB.' }),
+  })
+  .refine((v) => Boolean(v.tarefa_id || v.lista_id), { message: 'Informe a tarefa ou a lista.' })

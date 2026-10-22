@@ -17,7 +17,9 @@ import {
   getTarefa,
   getTarefaDetalhe,
 } from '@/lib/tasks/data'
+import { srcDaImagem } from '@/lib/tasks/descricao'
 import { enderecoGoogleValido, extrairEventos, type EventoAgenda } from '@/lib/tasks/ics'
+import { sanitizarDescricao } from '@/lib/tasks/sanitizar'
 import { diferencaDias, hojeISO, somarDias } from '@/lib/tasks/datas'
 import {
   podeAdministrarEspaco,
@@ -37,6 +39,7 @@ import {
   equipeSchema,
   espacoSchema,
   favoritoSchema,
+  imagemDescricaoSchema,
   gestorSchema,
   listaSchema,
   moverParaListaSchema,
@@ -746,7 +749,8 @@ export async function criarTarefa(input: unknown): Promise<Resultado<Tarefa>> {
   const parsed = novaTarefaSchema.safeParse(input)
   if (!parsed.success) return falha(primeiraMensagem(parsed.error))
 
-  const { lista_id, titulo, pai_id, prioridade, data_vencimento, responsaveis, descricao } = parsed.data
+  const { lista_id, titulo, pai_id, prioridade, data_vencimento, responsaveis } = parsed.data
+  const descricao = sanitizarDescricao(parsed.data.descricao)
 
   const alvo = await listaVisivel(ctx, lista_id)
   if (!alvo) return falha('Lista não encontrada.')
@@ -828,8 +832,9 @@ export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): P
   const update: Record<string, unknown> = {}
 
   if (patch.titulo !== undefined && patch.titulo !== atual.titulo) update.titulo = patch.titulo
-  if (patch.descricao !== undefined && (patch.descricao ?? '') !== (atual.descricao ?? '')) {
-    update.descricao = patch.descricao?.trim() ? patch.descricao : null
+  if (patch.descricao !== undefined) {
+    const limpa = sanitizarDescricao(patch.descricao)
+    if ((limpa ?? '') !== (atual.descricao ?? '')) update.descricao = limpa
   }
   if (patch.status_id !== undefined && patch.status_id !== atual.status_id) {
     update.status_id = patch.status_id
@@ -1788,4 +1793,34 @@ export async function salvarPessoaAdmin(input: unknown): Promise<Resultado<{ ema
 
   revalidatePath('/tasks', 'layout')
   return sucesso({ email, cargo: cargo || null, gestor_email, equipes: [...new Set(equipes)] }, 'Pessoa atualizada.')
+}
+
+// ---------------------------------------------------------------------------
+//  IMAGENS DENTRO DA DESCRIÇÃO
+//  Mesmo bucket privado dos anexos, pasta própria, sem virar anexo. A
+//  descrição guarda o endereço /api/tasks/imagem, que confere o acesso.
+// ---------------------------------------------------------------------------
+
+export async function pedirUploadDeImagem(
+  input: unknown,
+): Promise<Resultado<{ caminho: string; token: string; src: string }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+
+  const parsed = imagemDescricaoSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { tarefa_id, lista_id, tipo_mime } = parsed.data
+
+  let espacoId: string | null = null
+  if (tarefa_id) espacoId = (await tarefaVisivel(ctx, tarefa_id))?.espaco_id ?? null
+  else if (lista_id) espacoId = (await listaVisivel(ctx, lista_id))?.espaco.id ?? null
+  if (!espacoId) return falha('Tarefa ou lista não encontrada.')
+
+  const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[tipo_mime]
+  const caminho = `descricao/${espacoId}/${randomUUID()}.${ext}`
+
+  const { data, error } = await ctx.supabase.storage.from(BUCKET_ANEXOS).createSignedUploadUrl(caminho)
+  if (error || !data) return falha(`Não foi possível preparar o envio da imagem: ${error?.message ?? 'sem retorno'}`)
+
+  return sucesso({ caminho: data.path, token: data.token, src: srcDaImagem(data.path) })
 }
