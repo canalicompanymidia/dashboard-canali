@@ -649,6 +649,17 @@ Migration `0008_tasks_produtividade.sql`.
   imagens só da rota interna, links só http(s)/mailto). Descrições
   antigas em texto puro continuam abrindo, convertidas em parágrafos.
 
+### Aviso por e-mail ao responsável (Resend)
+
+Quando alguém é colocado como responsável — ao criar a tarefa ou ao
+atribuir depois — ele recebe um e-mail com título, onde está, status,
+prazo, prioridade e o botão "Abrir tarefa". Quem atribui a si mesmo não
+recebe, e só colaboradores ativos recebem. O envio acontece depois da
+resposta (`after()`), então o clique não espera; falhas ficam no log.
+
+Configuração na Vercel: `RESEND_API_KEY` e `RESEND_FROM` (remetente num
+domínio verificado no Resend). Sem elas, nada é enviado e nada quebra.
+
 ### Favoritos, perfis e equipes
 
 Migration `0009_favoritos_perfis_equipes.sql`.

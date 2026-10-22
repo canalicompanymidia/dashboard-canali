@@ -3,6 +3,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { after } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { getColaborador, type Colaborador } from '@/lib/auth'
@@ -19,6 +20,7 @@ import {
 } from '@/lib/tasks/data'
 import { srcDaImagem } from '@/lib/tasks/descricao'
 import { enderecoGoogleValido, extrairEventos, type EventoAgenda } from '@/lib/tasks/ics'
+import { avisarResponsaveis } from '@/lib/tasks/notificar'
 import { sanitizarDescricao } from '@/lib/tasks/sanitizar'
 import { diferencaDias, hojeISO, somarDias } from '@/lib/tasks/datas'
 import {
@@ -800,7 +802,20 @@ export async function criarTarefa(input: unknown): Promise<Resultado<Tarefa>> {
   const tarefa = await getTarefa(tarefaId)
   if (!tarefa) return falha('A tarefa foi criada, mas não pôde ser lida de volta.')
 
+  if (responsaveis.length > 0) agendarAviso(tarefa, responsaveis, ctx.colab.email, true, await origemDaRequisicao())
+
   return sucesso(tarefa, pai_id ? 'Subtarefa criada.' : 'Tarefa criada.')
+}
+
+/** E-mail para os novos responsáveis, depois da resposta: o clique não espera o envio. */
+function agendarAviso(tarefa: Tarefa, novos: string[], autor: string, criada: boolean, origem: string) {
+  after(async () => {
+    try {
+      await avisarResponsaveis({ tarefa, novos, autor, origem, criada })
+    } catch (e) {
+      console.error('[tasks] aviso por e-mail falhou:', e)
+    }
+  })
 }
 
 function rotuloPrioridade(p: Tarefa['prioridade']): string | null {
@@ -931,6 +946,8 @@ export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): P
   if (entram.length > 0 || saem.length > 0) itens.push({ tipo: 'responsaveis', detalhe: { entram, saem } })
 
   const atividades = await registrarAtividades(ctx.supabase, atual.id, ctx.colab.email, itens)
+
+  if (entram.length > 0) agendarAviso(tarefa, entram, ctx.colab.email, false, await origemDaRequisicao())
 
   return sucesso({ tarefa, atividades })
 }
