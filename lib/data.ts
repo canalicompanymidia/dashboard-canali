@@ -230,7 +230,7 @@ export async function getMonthlyMetrics(year?: number, month?: number): Promise<
   const supabase = await getSupabaseServerClient()
   if (!supabase) return emptyMonthlyMetrics(targetYear, targetMonth)
 
-  const [revenueResult, spendResult] = await Promise.all([
+  const [revenueResult, spendResult, segmentsResult] = await Promise.all([
     supabase
       .from('v_monthly_revenue')
       .select(
@@ -246,7 +246,28 @@ export async function getMonthlyMetrics(year?: number, month?: number): Promise<
       .select('total_spend')
       .eq('year', targetYear)
       .eq('month', targetMonth),
+    // Recorrências e funil de entrada (migration 0010).
+    supabase
+      .from('v_monthly_revenue_segments')
+      .select('recorrencia_bruto, recorrencia_liquido, recorrencia_qtd, funil_bruto, funil_liquido, funil_qtd')
+      .eq('year', targetYear)
+      .eq('month', targetMonth)
+      .maybeSingle(),
   ])
+
+  const seg = segmentsResult.data
+  const segments = {
+    recurring: {
+      grossRevenue: toNumber(seg?.recorrencia_bruto),
+      netRevenue: toNumber(seg?.recorrencia_liquido),
+      count: toNumber(seg?.recorrencia_qtd),
+    },
+    entryFunnel: {
+      grossRevenue: toNumber(seg?.funil_bruto),
+      netRevenue: toNumber(seg?.funil_liquido),
+      count: toNumber(seg?.funil_qtd),
+    },
+  }
 
   const rows = revenueResult.data ?? []
 
@@ -289,6 +310,7 @@ export async function getMonthlyMetrics(year?: number, month?: number): Promise<
     ...totals,
     adSpend,
     byPlatform: byPlatform.sort((a, b) => b.grossRevenue - a.grossRevenue),
+    segments,
   })
 }
 

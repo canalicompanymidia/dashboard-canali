@@ -9,6 +9,8 @@ import {
   Coins,
   Info,
   Megaphone,
+  Filter,
+  Repeat,
   RefreshCw,
   ShoppingCart,
   Wallet,
@@ -196,6 +198,22 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
         />
       </div>
 
+      {/* Origem do faturamento */}
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Stat
+          label="Faturamento de recorrências"
+          value={formatCurrency(metrics.segments.recurring.grossRevenue)}
+          hint={`${formatNumber(metrics.segments.recurring.count)} renovação(ões) de assinatura · ${formatCurrency(metrics.segments.recurring.netRevenue)} líquido`}
+          icon={Repeat}
+        />
+        <Stat
+          label="Faturamento do funil de entrada"
+          value={formatCurrency(metrics.segments.entryFunnel.grossRevenue)}
+          hint={`${formatNumber(metrics.segments.entryFunnel.count)} venda(s) · ${formatCurrency(metrics.segments.entryFunnel.netRevenue)} líquido · sem vendedores`}
+          icon={Filter}
+        />
+      </div>
+
       {/* Detalhamento */}
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4 lg:col-span-2">
@@ -299,7 +317,10 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
         {showFormula ? (
           <span id="formula-metricas">
             Bruto = vendas aprovadas · Líquido = bruto − taxas − reembolsos · Lucro = líquido −
-            tráfego
+            tráfego · Recorrências = assinaturas a partir da 2ª cobrança · Funil de entrada = 1ª
+            compra de Mercado Livre Sem Estoque, SellerUp, Loja Pronta Sem Estoque e Shopee Sem
+            Estoque, sem sck de vendedor (priscila, tiffany, samuel, carlos, melissa, patrick,
+            fabiano, mateus)
           </span>
         ) : null}
 

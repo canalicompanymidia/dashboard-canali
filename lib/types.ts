@@ -215,7 +215,20 @@ export interface MonthlyMetrics {
   roas: number
   averageTicket: number
   byPlatform: PlatformBreakdown[]
+  /** Faturamento por origem: recorrências e funil de entrada. */
+  segments: RevenueSegments
   updatedAt: string
+}
+
+export interface RevenueSegment {
+  grossRevenue: number
+  netRevenue: number
+  count: number
+}
+
+export interface RevenueSegments {
+  recurring: RevenueSegment
+  entryFunnel: RevenueSegment
 }
 
 export interface PlatformBreakdown {

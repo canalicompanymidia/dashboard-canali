@@ -4,6 +4,7 @@ import type {
   MonthlyMetrics,
   PlatformBreakdown,
   PlatformSource,
+  RevenueSegments,
   YearContext,
 } from './types'
 import { BUSINESS_TIMEZONE, monthName, toNumber } from './utils'
@@ -195,6 +196,7 @@ export function buildMonthlyMetrics(input: {
   approvedCount: number
   adSpend: number
   byPlatform: PlatformBreakdown[]
+  segments?: RevenueSegments
 }): MonthlyMetrics {
   const grossProfit = calcGrossProfit(input.netRevenue, input.adSpend)
 
@@ -213,8 +215,14 @@ export function buildMonthlyMetrics(input: {
     roas: calcRoas(input.netRevenue, input.adSpend),
     averageTicket: calcAverageTicket(input.grossRevenue, input.approvedCount),
     byPlatform: input.byPlatform,
+    segments: input.segments ?? emptySegments(),
     updatedAt: new Date().toISOString(),
   }
+}
+
+export function emptySegments(): RevenueSegments {
+  const zero = { grossRevenue: 0, netRevenue: 0, count: 0 }
+  return { recurring: { ...zero }, entryFunnel: { ...zero } }
 }
 
 /** Métricas zeradas — usado antes da primeira venda ou sem Supabase configurado. */
