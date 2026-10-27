@@ -3,6 +3,7 @@
 import * as React from 'react'
 
 import { contarChatNaoLidas } from '@/app/tasks/chat/actions'
+import { tocarSomChat, useSomChat } from '@/components/tasks/chat-som'
 import { useSinalChat } from '@/components/tasks/presenca'
 
 /** Avisa a barra lateral que o total de não lidas mudou. */
@@ -15,10 +16,16 @@ export const EVENTO_CHAT_LIDO = 'tasks:chat-lido'
 export function useChatNaoLidas(inicial: number): number {
   const { sinalChat } = useSinalChat()
   const [total, setTotal] = React.useState(inicial)
+  const anterior = React.useRef(inicial)
+  // Mantém o áudio pronto para tocar em qualquer tela do Tasks.
+  useSomChat()
 
   const recontar = React.useCallback(async () => {
     const r = await contarChatNaoLidas()
-    if (r.ok) setTotal(r.data)
+    if (!r.ok) return
+    if (r.data > anterior.current) tocarSomChat()
+    anterior.current = r.data
+    setTotal(r.data)
   }, [])
 
   React.useEffect(() => {

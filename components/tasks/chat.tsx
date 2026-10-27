@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { ArrowLeft, Check, LogOut, MessageSquarePlus, MoreHorizontal, Pencil, SendHorizontal, UserPlus, Users } from 'lucide-react'
+import { ArrowLeft, Bell, BellOff, Check, LogOut, MessageSquarePlus, MoreHorizontal, Pencil, SendHorizontal, UserPlus, Users } from 'lucide-react'
 
 import {
   abrirConversa,
@@ -13,6 +13,7 @@ import {
   sairDoGrupo,
 } from '@/app/tasks/chat/actions'
 import { EVENTO_CHAT_LIDO } from '@/components/tasks/chat-contador'
+import { tocarSomChat, useSomChat } from '@/components/tasks/chat-som'
 import { Avatar } from '@/components/tasks/pecas'
 import { useSinalChat } from '@/components/tasks/presenca'
 import { useTasks } from '@/components/tasks/provider'
@@ -84,6 +85,7 @@ export function ChatView({
   const [conversas, setConversas] = React.useState(conversasIniciais)
   const [aberta, setAberta] = React.useState<string | null>(abertaInicial)
   const [nova, setNova] = React.useState(false)
+  const [som, alternarSom] = useSomChat()
   // As mensagens que vieram do servidor valem só para a primeira abertura.
   const iniciais = React.useRef(mensagensIniciais)
 
@@ -126,10 +128,22 @@ export function ChatView({
       >
         <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
           <span className="text-sm font-semibold">Conversas</span>
-          <Button size="sm" variant="outline" onClick={() => setNova(true)}>
-            <MessageSquarePlus className="size-4" />
-            Nova
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={alternarSom}
+              aria-pressed={som}
+              aria-label={som ? 'Desligar som das mensagens' : 'Ligar som das mensagens'}
+              title={som ? 'Som ligado' : 'Som desligado'}
+            >
+              {som ? <Bell className="size-4" /> : <BellOff className="size-4 text-muted-foreground" />}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setNova(true)}>
+              <MessageSquarePlus className="size-4" />
+              Nova
+            </Button>
+          </div>
         </div>
         <ListaConversas conversas={conversas} aberta={aberta} eu={colab.email} onAbrir={abrir} onNova={() => setNova(true)} />
       </aside>
@@ -314,13 +328,16 @@ function Conversa({
     const depois = ultimaRef.current
     const r = await carregarMensagens({ conversaId: conversa.id, ...(depois ? { depois } : {}) })
     if (!r.ok || r.data.mensagens.length === 0) return
+    // A conversa aberta marca como lida na hora, então o contador não sobe:
+    // o aviso sonoro sai daqui.
+    if (r.data.mensagens.some((m) => m.autor !== colab.email)) tocarSomChat()
     setMensagens((atual) => {
       const ids = new Set(atual.map((m) => m.id))
       const novas = r.data.mensagens.filter((m) => !ids.has(m.id))
       return novas.length ? [...atual, ...novas] : atual
     })
     if (document.visibilityState === 'visible') marcarLida()
-  }, [conversa.id, marcarLida])
+  }, [conversa.id, marcarLida, colab.email])
 
   React.useEffect(() => {
     if (sinal) void buscarNovas()
