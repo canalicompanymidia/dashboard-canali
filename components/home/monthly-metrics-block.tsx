@@ -320,7 +320,8 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
             tráfego · Recorrências = assinaturas a partir da 2ª cobrança · Funil de entrada = 1ª
             compra de Mercado Livre Sem Estoque, SellerUp, Loja Pronta Sem Estoque e Shopee Sem
             Estoque, sem sck de vendedor (priscila, tiffany, samuel, carlos, melissa, patrick,
-            fabiano, mateus)
+            fabiano, mateus), mais Do Zero à Primeira Venda na Shopee e DesbravadorIA com sck de
+            YouTube ou Instagram (youtube, ytb, instagram, ig)
           </span>
         ) : null}
 
