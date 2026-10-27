@@ -8,6 +8,7 @@ import {
   FolderOpen,
   FolderPlus,
   Home,
+  Inbox,
   ListPlus,
   Lock,
   MoreHorizontal,
@@ -127,7 +128,7 @@ function destinoAposExcluir(pathname: string, alvo: Dialogo): string | null {
 function Conteudo() {
   const pathname = usePathname()
   const router = useRouter()
-  const { arvore, colab } = useTasks()
+  const { arvore, colab, caixaNaoLidas } = useTasks()
   const [dialogo, setDialogo] = React.useState<Dialogo | null>(null)
   const [fechados, setFechados] = React.useState<Set<string>>(new Set())
 
@@ -160,6 +161,9 @@ function Conteudo() {
       <nav className="space-y-0.5 p-2" aria-label="Atalhos">
         <ItemNav href="/tasks" icone={Home} ativo={pathname === '/tasks'}>
           Início
+        </ItemNav>
+        <ItemNav href="/tasks/caixa" icone={Inbox} ativo={pathname.startsWith('/tasks/caixa')} contador={caixaNaoLidas}>
+          Caixa de entrada
         </ItemNav>
         <ItemNav href="/tasks/minhas" icone={UserRound} ativo={pathname.startsWith('/tasks/minhas')}>
           Minhas tarefas
@@ -416,11 +420,13 @@ function ItemNav({
   href,
   icone: Icone,
   ativo,
+  contador = 0,
   children,
 }: {
   href: string
   icone: React.ComponentType<{ className?: string }>
   ativo: boolean
+  contador?: number
   children: React.ReactNode
 }) {
   return (
@@ -433,6 +439,11 @@ function ItemNav({
     >
       <Icone className="size-4" />
       {children}
+      {contador > 0 ? (
+        <span className="ml-auto rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground tabular">
+          {contador > 99 ? '99+' : contador}
+        </span>
+      ) : null}
     </Link>
   )
 }

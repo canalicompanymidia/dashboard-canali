@@ -1157,10 +1157,43 @@ function Atividade({
   colabEmail: string
   setComentarios: (fn: (c: Comentario[]) => Comentario[]) => void
 }) {
-  const { colab } = useTasks()
+  const { colab, pessoas } = useTasks()
   const { executar, pendente, erro } = useAcao()
   const [texto, setTexto] = React.useState('')
+  const [mencoes, setMencoes] = React.useState<{ email: string; rotulo: string }[]>([])
+  const [busca, setBusca] = React.useState<string | null>(null)
+  const campoRef = React.useRef<HTMLTextAreaElement>(null)
   const fimRef = React.useRef<HTMLDivElement>(null)
+
+  // "@" seguido de letras no ponto do cursor abre a lista de pessoas.
+  function detectar(valor: string, cursor: number) {
+    const m = /(?:^|\s)@([\p{L}]*)$/u.exec(valor.slice(0, cursor))
+    setBusca(m ? m[1].toLowerCase() : null)
+  }
+
+  const sugestoes = React.useMemo(() => {
+    if (busca === null) return []
+    return pessoas
+      .filter((p) => p.email !== colab.email)
+      .filter((p) => (p.nome || p.email).toLowerCase().split(/\s+/).some((parte) => parte.startsWith(busca)) || p.email.startsWith(busca))
+      .slice(0, 5)
+  }, [busca, pessoas, colab.email])
+
+  function escolher(p: { email: string; nome: string | null }) {
+    const campo = campoRef.current
+    const cursor = campo?.selectionStart ?? texto.length
+    const antes = texto.slice(0, cursor).replace(/@[\p{L}]*$/u, '')
+    const rotulo = (p.nome || p.email).split(/\s+/)[0]
+    const novo = `${antes}@${rotulo} ${texto.slice(cursor)}`
+    setTexto(novo)
+    setMencoes((atual) => (atual.some((m) => m.email === p.email) ? atual : [...atual, { email: p.email, rotulo }]))
+    setBusca(null)
+    requestAnimationFrame(() => {
+      const pos = antes.length + rotulo.length + 2
+      campo?.focus()
+      campo?.setSelectionRange(pos, pos)
+    })
+  }
 
   const linha = React.useMemo<ItemLinhaDoTempo[]>(() => {
     const itens: ItemLinhaDoTempo[] = [
@@ -1177,10 +1210,13 @@ function Atividade({
   async function enviar() {
     const t = texto.trim()
     if (!t) return
-    const novo = await executar(() => comentar({ tarefa_id: detalhe.tarefa.id, texto: t }))
+    // Só vale a menção que continua escrita no texto.
+    const marcados = mencoes.filter((m) => t.includes(`@${m.rotulo}`)).map((m) => m.email)
+    const novo = await executar(() => comentar({ tarefa_id: detalhe.tarefa.id, texto: t, mencoes: marcados }))
     if (novo) {
       setComentarios((atual) => [...atual, novo])
       setTexto('')
+      setMencoes([])
     }
   }
 
@@ -1221,18 +1257,49 @@ function Atividade({
         <div className="flex items-start gap-2">
           <Avatar email={colabEmail} tamanho="md" className="mt-1" />
           <div className="min-w-0 flex-1">
-            <Textarea
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                  e.preventDefault()
-                  void enviar()
-                }
-              }}
-              placeholder="Escreva um comentário… (Ctrl+Enter envia)"
-              className="min-h-16 text-[13px]"
-            />
+            <div className="relative">
+              {sugestoes.length > 0 ? (
+                <ul className="absolute bottom-full left-0 z-20 mb-1 w-64 overflow-hidden rounded-lg border border-border bg-popover py-1 shadow-lg" role="listbox" aria-label="Mencionar">
+                  {sugestoes.map((p) => (
+                    <li key={p.email}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          escolher(p)
+                        }}
+                        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] hover:bg-accent"
+                      >
+                        <Avatar email={p.email} tamanho="xs" />
+                        <span className="truncate">{p.nome || p.email}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <Textarea
+                ref={campoRef}
+                value={texto}
+                onChange={(e) => {
+                  setTexto(e.target.value)
+                  detectar(e.target.value, e.target.selectionStart ?? e.target.value.length)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && sugestoes.length > 0 && !e.metaKey && !e.ctrlKey) {
+                    e.preventDefault()
+                    escolher(sugestoes[0])
+                    return
+                  }
+                  if (e.key === 'Escape') setBusca(null)
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault()
+                    void enviar()
+                  }
+                }}
+                placeholder="Escreva um comentário… Use @ para chamar alguém (Ctrl+Enter envia)"
+                className="min-h-16 text-[13px]"
+              />
+            </div>
             {erro ? <p className="mt-1 text-xs text-destructive">{erro}</p> : null}
             <div className="mt-1.5 flex justify-end">
               <Button size="sm" onClick={enviar} disabled={pendente || !texto.trim()}>

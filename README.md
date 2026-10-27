@@ -89,6 +89,8 @@ aplique só as migrations que faltam, em ordem, de `supabase/migrations/`:
 | `0006_tasks.sql` | Módulo Tasks: espaços, listas, tarefas, anexos (bucket privado) e a estrutura inicial |
 | `0007_clickup_ids.sql` | Ids de origem para importar do ClickUp sem duplicar |
 | `0008_tasks_produtividade.sql` | Tasks: visualização padrão, reunião e links na tarefa, agenda assinável, Google Calendar, presença |
+| `0010_faturamento_por_origem.sql` | Métricas do Mês: faturamento de recorrências e do funil de entrada |
+| `0011_caixa_de_entrada.sql` | Tasks: avisos da Caixa de entrada |
 | `0009_favoritos_perfis_equipes.sql` | Favoritos na barra lateral, perfis com foto (bucket privado `avatares`) e cargo, equipes e organograma |
 
 > **Ordem obrigatória da 0004.** Rode a `0004a`, publique o código com a tela
@@ -659,6 +661,17 @@ resposta (`after()`), então o clique não espera; falhas ficam no log.
 
 Configuração na Vercel: `RESEND_API_KEY` e `RESEND_FROM` (remetente num
 domínio verificado no Resend). Sem elas, nada é enviado e nada quebra.
+
+### Caixa de entrada
+
+`/tasks/caixa`, com contador na barra lateral. Três abas: **Para você**
+(atribuição, menção com @, comentário em tarefa que você acompanha),
+**Atualizações** (status e prazo) e **Feito** (lidos). Uma linha por
+tarefa, em blocos Hoje / Ontem / Esta semana / Antes, com ações na linha:
+marcar como lida, mais tarde (amanhã 8h), responder e concluir. Tarefas
+suas vencendo hoje ou atrasadas aparecem numa linha só, dispensável no
+dia. Quem faz a ação nunca é avisado. Avisos em `tarefas_notificacoes`
+(migration 0011), só lidos pelo servidor.
 
 ### Favoritos, perfis e equipes
 

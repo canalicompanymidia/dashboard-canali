@@ -195,6 +195,8 @@ export const checklistItemSchema = z.object({
 export const comentarioSchema = z.object({
   tarefa_id: uuid,
   texto: z.string().trim().min(1, { message: 'Escreva algo.' }).max(5000),
+  /** Pessoas marcadas com @ no comentário. */
+  mencoes: z.array(email).max(30).default([]),
 })
 
 /** Pedido de upload: o servidor confere a pessoa e devolve a URL assinada. */

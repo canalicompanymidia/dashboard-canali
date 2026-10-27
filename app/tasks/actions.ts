@@ -12,6 +12,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/server'
 import {
   baixarIcsGoogle,
   esquecerAvatar,
+  getPessoas,
   getPreferenciasBrutas,
   getReunioesGoogle,
   getStatuses,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/tasks/data'
 import { srcDaImagem } from '@/lib/tasks/descricao'
 import { enderecoGoogleValido, extrairEventos, type EventoAgenda } from '@/lib/tasks/ics'
+import { acompanhantes, avisar } from '@/lib/tasks/caixa'
 import { avisarResponsaveis } from '@/lib/tasks/notificar'
 import { sanitizarDescricao } from '@/lib/tasks/sanitizar'
 import { diferencaDias, hojeISO, somarDias } from '@/lib/tasks/datas'
@@ -802,7 +804,10 @@ export async function criarTarefa(input: unknown): Promise<Resultado<Tarefa>> {
   const tarefa = await getTarefa(tarefaId)
   if (!tarefa) return falha('A tarefa foi criada, mas não pôde ser lida de volta.')
 
-  if (responsaveis.length > 0) agendarAviso(tarefa, responsaveis, ctx.colab.email, true, await origemDaRequisicao())
+  if (responsaveis.length > 0) {
+    agendarAviso(tarefa, responsaveis, ctx.colab.email, true, await origemDaRequisicao())
+    await avisar(ctx.supabase, { tarefaId: tarefa.id, tipo: 'atribuida', para: responsaveis, autor: ctx.colab.email, detalhe: { criada: true } })
+  }
 
   return sucesso(tarefa, pai_id ? 'Subtarefa criada.' : 'Tarefa criada.')
 }
@@ -947,7 +952,18 @@ export async function atualizarTarefa(tarefaId: unknown, patchInput: unknown): P
 
   const atividades = await registrarAtividades(ctx.supabase, atual.id, ctx.colab.email, itens)
 
-  if (entram.length > 0) agendarAviso(tarefa, entram, ctx.colab.email, false, await origemDaRequisicao())
+  if (entram.length > 0) {
+    agendarAviso(tarefa, entram, ctx.colab.email, false, await origemDaRequisicao())
+    await avisar(ctx.supabase, { tarefaId: tarefa.id, tipo: 'atribuida', para: entram, autor: ctx.colab.email })
+  }
+  // Quem já acompanhava a tarefa fica sabendo de status e prazo.
+  const quemAcompanha = acompanhantes(tarefa).filter((e) => !entram.includes(e))
+  if (update.status_id !== undefined) {
+    await avisar(ctx.supabase, { tarefaId: tarefa.id, tipo: 'status', para: quemAcompanha, autor: ctx.colab.email, detalhe: { de: atual.status_nome, para: tarefa.status_nome, para_cor: tarefa.status_cor } })
+  }
+  if (update.data_vencimento !== undefined) {
+    await avisar(ctx.supabase, { tarefaId: tarefa.id, tipo: 'prazo', para: quemAcompanha, autor: ctx.colab.email, detalhe: { de: atual.data_vencimento, para: tarefa.data_vencimento } })
+  }
 
   return sucesso({ tarefa, atividades })
 }
@@ -987,6 +1003,10 @@ export async function moverTarefa(input: unknown): Promise<Resultado<TarefaAtual
           },
         ])
       : []
+
+  if (tarefa.status_id !== atual.status_id) {
+    await avisar(ctx.supabase, { tarefaId: tarefa.id, tipo: 'status', para: acompanhantes(tarefa), autor: ctx.colab.email, detalhe: { de: atual.status_nome, para: tarefa.status_nome, para_cor: tarefa.status_cor } })
+  }
 
   return sucesso({ tarefa, atividades })
 }
@@ -1229,6 +1249,19 @@ export async function comentar(input: unknown): Promise<Resultado<Comentario>> {
   if (error || !data) return falha(`Erro ao comentar: ${error?.message ?? 'sem retorno'}`)
 
   await ctx.supabase.from('tarefas').update({ updated_at: new Date().toISOString() }).eq('id', tarefa.id)
+
+  // Avisos: quem foi marcado com @ recebe "mencionou você"; quem acompanha a tarefa, "comentou".
+  const ativos = new Set((await getPessoas()).map((p) => p.email))
+  const mencionados = parsed.data.mencoes.filter((e) => ativos.has(e))
+  const trecho = parsed.data.texto.slice(0, 200)
+  await avisar(ctx.supabase, { tarefaId: tarefa.id, tipo: 'mencao', para: mencionados, autor: ctx.colab.email, detalhe: { trecho } })
+  await avisar(ctx.supabase, {
+    tarefaId: tarefa.id,
+    tipo: 'comentario',
+    para: acompanhantes(tarefa).filter((e) => !mencionados.includes(e)),
+    autor: ctx.colab.email,
+    detalhe: { trecho },
+  })
 
   return sucesso(data as Comentario)
 }
@@ -1841,3 +1874,80 @@ export async function pedirUploadDeImagem(
 
   return sucesso({ caminho: data.path, token: data.token, src: srcDaImagem(data.path) })
 }
+
+// ---------------------------------------------------------------------------
+//  CAIXA DE ENTRADA
+// ---------------------------------------------------------------------------
+
+export interface AvisoCaixa {
+  id: string
+  tarefa_id: string
+  tipo: string
+  autor: string | null
+  detalhe: Record<string, unknown>
+  lida_em: string | null
+  adiada_ate: string | null
+  created_at: string
+}
+
+/** Marca como lidos os avisos (por id). Só os da própria pessoa. */
+export async function marcarAvisosLidos(ids: unknown): Promise<Resultado> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const parsed = uuid.array().max(500).safeParse(ids)
+  if (!parsed.success) return falha('Avisos inválidos.')
+  if (parsed.data.length === 0) return sucesso(null)
+  const { error } = await ctx.supabase
+    .from('tarefas_notificacoes')
+    .update({ lida_em: new Date().toISOString(), adiada_ate: null })
+    .eq('email', ctx.colab.email)
+    .in('id', parsed.data)
+  if (error) return falha(`Erro ao marcar como lido: ${error.message}`)
+  return sucesso(null)
+}
+
+/** Devolve avisos lidos para a caixa. */
+export async function marcarAvisosNaoLidos(ids: unknown): Promise<Resultado> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const parsed = uuid.array().max(500).safeParse(ids)
+  if (!parsed.success) return falha('Avisos inválidos.')
+  const { error } = await ctx.supabase
+    .from('tarefas_notificacoes')
+    .update({ lida_em: null })
+    .eq('email', ctx.colab.email)
+    .in('id', parsed.data)
+  if (error) return falha(`Erro: ${error.message}`)
+  return sucesso(null)
+}
+
+/** "Mais tarde": esconde os avisos até amanhã às 8h (Brasília). */
+export async function adiarAvisos(ids: unknown): Promise<Resultado<{ ate: string }>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const parsed = uuid.array().max(500).safeParse(ids)
+  if (!parsed.success) return falha('Avisos inválidos.')
+  const ate = new Date(`${somarDias(hojeISO(), 1)}T08:00:00-03:00`).toISOString()
+  const { error } = await ctx.supabase
+    .from('tarefas_notificacoes')
+    .update({ adiada_ate: ate })
+    .eq('email', ctx.colab.email)
+    .in('id', parsed.data)
+  if (error) return falha(`Erro ao adiar: ${error.message}`)
+  return sucesso({ ate })
+}
+
+/** Conclui a tarefa direto da caixa: vai para o primeiro status "concluído" da lista. */
+export async function concluirTarefa(tarefaId: unknown): Promise<Resultado<TarefaAtualizada>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const parsed = uuid.safeParse(tarefaId)
+  if (!parsed.success) return falha('Tarefa inválida.')
+  const tarefa = await tarefaVisivel(ctx, parsed.data)
+  if (!tarefa) return falha('Tarefa não encontrada.')
+  const statuses = await getStatuses(tarefa.lista_id)
+  const fim = statuses.find((s) => s.tipo === 'concluido') ?? statuses.find((s) => s.tipo === 'fechado')
+  if (!fim) return falha('Esta lista não tem um status de concluído.')
+  return atualizarTarefa(tarefa.id, { status_id: fim.id })
+}
+

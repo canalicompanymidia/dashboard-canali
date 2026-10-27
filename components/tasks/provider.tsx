@@ -31,6 +31,8 @@ interface TasksContextValue {
   ehFavorito: (tipo: TipoFavorito, id: string) => boolean
   /** Fixa/solta na hora; o servidor confirma por trás (e desfaz se recusar). */
   alternarFavorito: (tipo: TipoFavorito, id: string) => Promise<void>
+  /** Avisos esperando na Caixa de entrada (não lidos, não adiados). */
+  caixaNaoLidas: number
 }
 
 const TasksContext = React.createContext<TasksContextValue | null>(null)
@@ -53,12 +55,14 @@ export function TasksProvider({
   pessoas,
   arvore,
   favoritos: favoritosDoServidor,
+  caixaNaoLidas = 0,
   children,
 }: {
   colab: Pessoa
   pessoas: Pessoa[]
   arvore: EspacoComArvore[]
   favoritos: Favorito[]
+  caixaNaoLidas?: number
   children: React.ReactNode
 }) {
   const router = useRouter()
@@ -170,8 +174,9 @@ export function TasksProvider({
       favoritos,
       ehFavorito,
       alternarFavorito,
+      caixaNaoLidas,
     }),
-    [colab, pessoas, pessoa, nomeDe, arvore, abrirTarefa, fecharTarefa, prefetchTarefa, pegarDetalhe, emitir, ouvir, sidebarAberta, favoritos, ehFavorito, alternarFavorito],
+    [colab, pessoas, pessoa, nomeDe, arvore, abrirTarefa, fecharTarefa, prefetchTarefa, pegarDetalhe, emitir, ouvir, sidebarAberta, favoritos, ehFavorito, alternarFavorito, caixaNaoLidas],
   )
 
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>

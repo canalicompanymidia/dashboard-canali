@@ -646,3 +646,61 @@ export async function getReunioesGoogle(email: string, inicio: string, fim: stri
     return []
   }
 }
+
+// ---------------------------------------------------------------------------
+//  Caixa de Entrada
+// ---------------------------------------------------------------------------
+
+export interface AvisoDaCaixa {
+  id: string
+  tarefa_id: string
+  tipo: 'atribuida' | 'mencao' | 'comentario' | 'status' | 'prazo'
+  autor: string | null
+  detalhe: Record<string, unknown>
+  lida_em: string | null
+  adiada_ate: string | null
+  created_at: string
+}
+
+/** Avisos dos últimos 60 dias e as tarefas deles (só as que a pessoa ainda enxerga). */
+export async function getCaixa(colab: Colaborador): Promise<{ avisos: AvisoDaCaixa[]; tarefas: Tarefa[] }> {
+  const supabase = db()
+  if (!supabase) return { avisos: [], tarefas: [] }
+  const desde = new Date(Date.now() - 60 * 86_400_000).toISOString()
+  const { data } = await supabase
+    .from('tarefas_notificacoes')
+    .select('id, tarefa_id, tipo, autor, detalhe, lida_em, adiada_ate, created_at')
+    .eq('email', colab.email)
+    .gte('created_at', desde)
+    .order('created_at', { ascending: false })
+    .limit(1000)
+  const avisos = (data ?? []) as AvisoDaCaixa[]
+  const ids = [...new Set(avisos.map((a) => a.tarefa_id))]
+  if (ids.length === 0) return { avisos: [], tarefas: [] }
+
+  const visiveis = new Set((await getEspacosVisiveis(colab)).map((e) => e.id))
+  const tarefas: Tarefa[] = []
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data: lote } = await supabase.from('v_tarefas').select('*').in('id', ids.slice(i, i + 200))
+    for (const linha of (lote ?? []) as Record<string, unknown>[]) {
+      const t = normalizarTarefa(linha)
+      if (visiveis.has(t.espaco_id)) tarefas.push(t)
+    }
+  }
+  const ok = new Set(tarefas.map((t) => t.id))
+  return { avisos: avisos.filter((a) => ok.has(a.tarefa_id)), tarefas }
+}
+
+/** Quantos avisos esperam a pessoa (não lidos e não adiados). Para o contador da barra lateral. */
+export async function contarCaixa(email: string): Promise<number> {
+  const supabase = db()
+  if (!supabase) return 0
+  const agora = new Date().toISOString()
+  const { count } = await supabase
+    .from('tarefas_notificacoes')
+    .select('id', { count: 'exact', head: true })
+    .eq('email', email)
+    .is('lida_em', null)
+    .or(`adiada_ate.is.null,adiada_ate.lte.${agora}`)
+  return count ?? 0
+}
