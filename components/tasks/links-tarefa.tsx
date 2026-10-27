@@ -241,7 +241,7 @@ export function LinksDaTarefa({
                     {r.rotulo.toLowerCase() !== host ? ` · ${host}` : ''}
                   </p>
                 </a>
-                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                <div className="flex shrink-0 items-center gap-0.5 [@media(hover:hover)]:opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                   <a href={l.url} target="_blank" rel="noopener noreferrer" className={ICONE} title="Abrir" aria-label={`Abrir ${l.titulo}`}>
                     <ExternalLink className="size-3.5" />
                   </a>

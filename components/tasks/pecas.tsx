@@ -60,7 +60,7 @@ export function StatusPill({
     <span
       className={cn(
         'inline-flex max-w-full items-center truncate rounded-[4px] font-semibold tracking-[0.06em] uppercase',
-        tamanho === 'xs' && 'h-[18px] px-1.5 text-[10px]',
+        tamanho === 'xs' && 'h-[18px] px-1.5 text-[11px]',
         tamanho === 'sm' && 'h-5 px-2 text-[10.5px]',
         tamanho === 'md' && 'h-7 px-2.5 text-[11.5px]',
         className,
@@ -325,7 +325,7 @@ export function ChipsDeCampos({
       {visiveis.map((c) => (
         <OpcaoChip key={c.chave} opcao={c.opcao} tamanho="xs" />
       ))}
-      {resto > 0 ? <span className="text-[10px] text-muted-foreground">+{resto}</span> : null}
+      {resto > 0 ? <span className="text-[11px] text-muted-foreground">+{resto}</span> : null}
     </span>
   )
 }

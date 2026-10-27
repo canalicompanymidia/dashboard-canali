@@ -419,7 +419,7 @@ export function EtiquetasEditor({
         }}
         onBlur={adicionar}
         placeholder={valor.length === 0 ? 'Adicionar etiqueta' : '+'}
-        className="h-6 min-w-24 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+        className="h-6 min-w-24 flex-1 rounded-sm bg-transparent text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/25 placeholder:text-muted-foreground"
       />
     </div>
   )

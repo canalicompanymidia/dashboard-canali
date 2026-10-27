@@ -137,7 +137,7 @@ export function ViewCalendario({ contexto, tarefas }: { contexto: ListaContexto;
                   >
                     {Number(dia.slice(8, 10))}
                   </span>
-                  {doDia.length > 0 ? <span className="text-[10px] text-muted-foreground">{doDia.length}</span> : null}
+                  {doDia.length > 0 ? <span className="text-[11px] text-muted-foreground">{doDia.length}</span> : null}
                 </div>
                 <ul className="space-y-1">
                   {visiveis.map((t) => (
@@ -168,7 +168,7 @@ export function ViewCalendario({ contexto, tarefas }: { contexto: ListaContexto;
                     </li>
                   ))}
                   {doDia.length > visiveis.length ? (
-                    <li className="px-1 text-[10px] text-muted-foreground">+{doDia.length - visiveis.length} mais</li>
+                    <li className="px-1 text-[11px] text-muted-foreground">+{doDia.length - visiveis.length} mais</li>
                   ) : null}
                 </ul>
               </div>

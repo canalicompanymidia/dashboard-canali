@@ -137,7 +137,7 @@ export function ManualRevenueTable({
                         <span className="font-medium">{formatCurrency(totalHome)}</span>
                         {viaWebhook > 0.005 && lancado ? (
                           <span
-                            className="block text-[10px] text-warning-foreground dark:text-warning"
+                            className="block text-[11px] text-warning-foreground dark:text-warning"
                             title="Esta plataforma também enviou venda por webhook neste mês. Confira se o valor lançado à mão não repete o que já entrou sozinho."
                           >
                             +{formatCurrency(viaWebhook)} de webhook

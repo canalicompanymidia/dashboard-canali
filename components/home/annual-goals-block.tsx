@@ -182,7 +182,7 @@ function GoalPanel({ item }: { item: GoalProgress }) {
         {/* EBITDA e ritmo necessário */}
         <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-border bg-background/60 p-3">
-            <dt className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+            <dt className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
               EBITDA objetivo
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular">
@@ -191,7 +191,7 @@ function GoalPanel({ item }: { item: GoalProgress }) {
           </div>
 
           <div className="rounded-lg border border-border bg-background/60 p-3">
-            <dt className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+            <dt className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
               EBITDA acumulado
             </dt>
             <dd
@@ -217,7 +217,7 @@ function GoalPanel({ item }: { item: GoalProgress }) {
           </div>
 
           <div className="col-span-2 rounded-lg border border-border bg-background/60 p-3 sm:col-span-1">
-            <dt className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+            <dt className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
               Ritmo necessário
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular">

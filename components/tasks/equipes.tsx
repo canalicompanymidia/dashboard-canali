@@ -181,7 +181,7 @@ function AbaEquipes({
                       {e.descricao ? <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{e.descricao}</p> : null}
                     </div>
                     {admin ? (
-                      <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      <div className="flex shrink-0 gap-0.5 [@media(hover:hover)]:opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                         <Button variant="ghost" size="icon-sm" onClick={() => setDialogo({ equipe: e })} aria-label={`Editar ${e.nome}`}>
                           <Pencil className="size-3.5" />
                         </Button>
@@ -839,7 +839,7 @@ function No({
           <button
             type="button"
             onClick={() => onAlternar(pessoa.email)}
-            className="relative z-10 -mt-px flex h-5 min-w-5 items-center justify-center gap-0.5 rounded-full border border-border bg-card px-1 text-[10px] text-muted-foreground shadow-xs hover:text-foreground"
+            className="relative z-10 -mt-px flex h-5 min-w-5 items-center justify-center gap-0.5 rounded-full border border-border bg-card px-1 text-[11px] text-muted-foreground shadow-xs hover:text-foreground"
             aria-expanded={!fechado}
             aria-label={fechado ? `Mostrar ${total} pessoa(s) abaixo de ${nomeDe(pessoa)}` : `Recolher abaixo de ${nomeDe(pessoa)}`}
           >
@@ -888,12 +888,12 @@ function CartaoPessoa({ pessoa, equipes, admin, pessoas, destaque, onGestor }: P
       {dela.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1">
           {dela.slice(0, 3).map((e) => (
-            <span key={e.id} className="inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium" style={{ backgroundColor: `${e.cor}22`, color: e.cor }}>
+            <span key={e.id} className="inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium" style={{ backgroundColor: `${e.cor}22`, color: e.cor }}>
               <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: e.cor }} />
               <span className="truncate">{e.nome}</span>
             </span>
           ))}
-          {dela.length > 3 ? <span className="text-[10px] text-muted-foreground">+{dela.length - 3}</span> : null}
+          {dela.length > 3 ? <span className="text-[11px] text-muted-foreground">+{dela.length - 3}</span> : null}
         </div>
       ) : null}
       {admin ? (

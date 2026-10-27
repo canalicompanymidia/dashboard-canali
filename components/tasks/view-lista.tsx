@@ -293,7 +293,7 @@ function NovaLinha({
         }}
         disabled={pendente}
         placeholder="Nome da tarefa — Enter para criar, Esc para cancelar"
-        className="h-8 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
+        className="h-8 flex-1 rounded-sm bg-transparent text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/25 placeholder:text-muted-foreground"
       />
       {erro ? <span className="text-xs text-destructive">{erro}</span> : null}
     </div>

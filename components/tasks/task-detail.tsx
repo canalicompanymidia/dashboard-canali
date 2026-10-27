@@ -866,7 +866,7 @@ function Checklist({
                   const ok = await executar(() => excluirItemChecklist(item.id))
                   if (ok !== undefined) setItens((atual) => atual.filter((i) => i.id !== item.id))
                 }}
-                className="rounded p-1 text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
+                className="rounded p-1 text-muted-foreground [@media(hover:hover)]:opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
                 aria-label={`Remover ${item.texto}`}
               >
                 <Trash2 className="size-3.5" />
@@ -1072,7 +1072,7 @@ function Anexos({
                       )}
                       <div className="px-2 py-1.5">
                         <p className="truncate text-[11px] font-medium" title={a.nome}>{a.nome}</p>
-                        <p className="text-[10px] text-muted-foreground">{tamanhoLegivel(a.tamanho)}</p>
+                        <p className="text-[11px] text-muted-foreground">{tamanhoLegivel(a.tamanho)}</p>
                       </div>
                     </div>
                   ) : (
@@ -1093,11 +1093,11 @@ function Anexos({
                     </div>
                     <div className="px-2 py-1.5">
                       <p className="truncate text-[11px] font-medium">{a.nome}</p>
-                      <p className="text-[10px] text-muted-foreground">{tamanhoLegivel(a.tamanho)}</p>
+                      <p className="text-[11px] text-muted-foreground">{tamanhoLegivel(a.tamanho)}</p>
                     </div>
                   </a>
                   )}
-                  <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <div className="absolute top-1 right-1 flex gap-0.5 [@media(hover:hover)]:opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                     {a.url ? (
                       <a
                         href={a.url}
@@ -1438,7 +1438,7 @@ function LinhaComentario({
           {formatarDataHora(comentario.created_at)}
         </time>
         {(podeEditar || podeApagar) && !editando ? (
-          <span className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+          <span className="flex gap-0.5 [@media(hover:hover)]:opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
             {podeEditar ? (
               <button type="button" onClick={() => setEditando(true)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Editar comentário">
                 <Pencil className="size-3" />

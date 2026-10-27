@@ -345,7 +345,7 @@ function LinhaGrupo({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <span className="text-[11px] text-muted-foreground tabular">{formatarRelativo(grupo.ultimo)}</span>
-          <div className="flex gap-0.5 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+          <div className="flex gap-0.5 [@media(hover:hover)]:opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
             {aba === 'feito' ? (
               <AcaoIcone rotulo="Voltar para a caixa" onClick={() => onAcao('naolida')} icone={RotateCcw} />
             ) : (

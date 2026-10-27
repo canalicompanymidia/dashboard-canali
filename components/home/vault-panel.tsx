@@ -550,7 +550,7 @@ export function VaultPanel({ configured }: { configured: boolean }) {
                     <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                       {c.category}
                       {c.subcategoria ? (
-                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px]">
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px]">
                           {c.subcategoria}
                         </span>
                       ) : null}

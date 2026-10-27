@@ -362,7 +362,7 @@ function Favoritos({ pathname }: { pathname: string }) {
               <button
                 type="button"
                 onClick={() => void alternarFavorito(f.tipo, f.id)}
-                className="flex size-6 shrink-0 items-center justify-center rounded-md text-warning-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-accent focus-visible:opacity-100 dark:text-warning"
+                className="flex size-6 shrink-0 items-center justify-center rounded-md text-warning-foreground [@media(hover:hover)]:opacity-0 transition-opacity group-hover:opacity-100 hover:bg-accent focus-visible:opacity-100 dark:text-warning"
                 aria-label={`Remover ${f.nome} dos favoritos`}
                 title="Remover dos favoritos"
               >

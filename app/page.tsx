@@ -81,7 +81,7 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
             rola a página. */}
         <Link
           href="/tasks"
-          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
+          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium pointer-coarse:py-2.5 transition-colors hover:bg-accent"
         >
           <ListChecks className="size-3.5" />
           Tasks
@@ -95,7 +95,7 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
           <a
             key={item.href}
             href={item.href}
-            className="rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
+            className="rounded-md border border-border bg-card px-3 py-1.5 font-medium pointer-coarse:py-2.5 transition-colors hover:bg-accent"
           >
             {item.label}
           </a>
@@ -107,7 +107,7 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
           href="https://automacoes.hubcanalicompany.app/"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
+          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium pointer-coarse:py-2.5 transition-colors hover:bg-accent"
         >
           Automações
           <ArrowUpRight className="size-3.5" />
@@ -119,13 +119,13 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
           href="https://claude.ai/artifact/HdBUfbgViBGp6FvwoJmte7"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
+          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium pointer-coarse:py-2.5 transition-colors hover:bg-accent"
         >
           Webinários
           <ArrowUpRight className="size-3.5" />
         </a>
 
-        <span className="rounded-md border border-border bg-card px-3 py-1.5 font-medium tabular">
+        <span className="rounded-md border border-border bg-card px-3 py-1.5 font-medium pointer-coarse:py-2.5 tabular">
           {year}
         </span>
 
@@ -134,7 +134,7 @@ function PageIntro({ year, colaborador }: { year: number; colaborador: Colaborad
         <form action="/auth/sair" method="post">
           <button
             type="submit"
-            className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-accent"
+            className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium pointer-coarse:py-2.5 transition-colors hover:bg-accent"
           >
             <LogOut className="size-3.5" />
             Sair
