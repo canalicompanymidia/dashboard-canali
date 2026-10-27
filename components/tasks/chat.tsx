@@ -13,6 +13,12 @@ import {
   sairDoGrupo,
 } from '@/app/tasks/chat/actions'
 import { EVENTO_CHAT_LIDO } from '@/components/tasks/chat-contador'
+import {
+  EVENTO_ABRIR_CONVERSA,
+  jaVistas,
+  notificarMensagem,
+  usePermissaoNotificacao,
+} from '@/components/tasks/chat-notificacao'
 import { tocarSomChat, useSomChat } from '@/components/tasks/chat-som'
 import { Avatar } from '@/components/tasks/pecas'
 import { useSinalChat } from '@/components/tasks/presenca'
@@ -86,6 +92,7 @@ export function ChatView({
   const [aberta, setAberta] = React.useState<string | null>(abertaInicial)
   const [nova, setNova] = React.useState(false)
   const [som, alternarSom] = useSomChat()
+  const [permissao, pedirPermissao] = usePermissaoNotificacao()
   // As mensagens que vieram do servidor valem só para a primeira abertura.
   const iniciais = React.useRef(mensagensIniciais)
 
@@ -116,6 +123,16 @@ export function ChatView({
     window.history.replaceState(window.history.state, '', url)
   }, [])
 
+  // Clique numa notificação com o chat já aberto: troca de conversa.
+  React.useEffect(() => {
+    const aoPedir = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail
+      void recarregar().then(() => abrir(id))
+    }
+    window.addEventListener(EVENTO_ABRIR_CONVERSA, aoPedir)
+    return () => window.removeEventListener(EVENTO_ABRIR_CONVERSA, aoPedir)
+  }, [abrir, recarregar])
+
   const conversa = conversas.find((c) => c.id === aberta) ?? null
 
   return (
@@ -134,8 +151,8 @@ export function ChatView({
               variant="ghost"
               onClick={alternarSom}
               aria-pressed={som}
-              aria-label={som ? 'Desligar som das mensagens' : 'Ligar som das mensagens'}
-              title={som ? 'Som ligado' : 'Som desligado'}
+              aria-label={som ? 'Desligar avisos de mensagem' : 'Ligar avisos de mensagem'}
+              title={som ? 'Avisos ligados (som e notificação)' : 'Avisos desligados'}
             >
               {som ? <Bell className="size-4" /> : <BellOff className="size-4 text-muted-foreground" />}
             </Button>
@@ -145,6 +162,14 @@ export function ChatView({
             </Button>
           </div>
         </div>
+        {permissao === 'default' && som ? (
+          <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-2 text-xs">
+            <span className="min-w-0 flex-1 text-muted-foreground">Receba aviso de mensagem com o Hub em segundo plano.</span>
+            <Button size="sm" variant="outline" onClick={() => void pedirPermissao()}>
+              Ativar
+            </Button>
+          </div>
+        ) : null}
         <ListaConversas conversas={conversas} aberta={aberta} eu={colab.email} onAbrir={abrir} onNova={() => setNova(true)} />
       </aside>
 
@@ -313,6 +338,7 @@ function Conversa({
         if (!ativo) return
         setCarregando(false)
         if (r.ok) {
+          jaVistas(r.data.mensagens.map((m) => m.id))
           setMensagens(r.data.mensagens)
           setTemMais(r.data.temMais)
         } else setErro(r.message)
@@ -330,14 +356,25 @@ function Conversa({
     if (!r.ok || r.data.mensagens.length === 0) return
     // A conversa aberta marca como lida na hora, então o contador não sobe:
     // o aviso sonoro sai daqui.
-    if (r.data.mensagens.some((m) => m.autor !== colab.email)) tocarSomChat()
+    const deOutros = r.data.mensagens.filter((m) => m.autor !== colab.email)
+    if (deOutros.length > 0) {
+      tocarSomChat()
+      const ultima = deOutros.at(-1)!
+      const autor = nomeDe(ultima.autor)
+      notificarMensagem({
+        mensagemId: ultima.id,
+        conversaId: conversa.id,
+        titulo: conversa.tipo === 'grupo' ? (conversa.nome ?? 'Grupo') : autor,
+        corpo: conversa.tipo === 'grupo' ? `${autor.split(' ')[0]}: ${ultima.texto}` : ultima.texto,
+      })
+    }
     setMensagens((atual) => {
       const ids = new Set(atual.map((m) => m.id))
       const novas = r.data.mensagens.filter((m) => !ids.has(m.id))
       return novas.length ? [...atual, ...novas] : atual
     })
     if (document.visibilityState === 'visible') marcarLida()
-  }, [conversa.id, marcarLida, colab.email])
+  }, [conversa.id, conversa.tipo, conversa.nome, marcarLida, colab.email, nomeDe])
 
   React.useEffect(() => {
     if (sinal) void buscarNovas()
