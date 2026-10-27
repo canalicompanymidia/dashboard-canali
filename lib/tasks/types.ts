@@ -336,3 +336,28 @@ export type EventoTarefa =
 export type Resultado<T = null> =
   | { ok: true; data: T; message?: string }
   | { ok: false; message: string }
+
+// ---------------------------------------------------------------------------
+//  Chat
+// ---------------------------------------------------------------------------
+
+export type TipoConversa = 'dm' | 'grupo'
+
+export interface MensagemChat {
+  id: string
+  autor: string
+  texto: string
+  created_at: string
+}
+
+/** Uma conversa na lista lateral do chat. */
+export interface ConversaResumo {
+  id: string
+  tipo: TipoConversa
+  /** Só grupos têm nome; na conversa individual o título é a outra pessoa. */
+  nome: string | null
+  membros: string[]
+  ultima_em: string
+  previa: MensagemChat | null
+  nao_lidas: number
+}

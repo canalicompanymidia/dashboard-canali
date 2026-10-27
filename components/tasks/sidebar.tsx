@@ -10,6 +10,7 @@ import {
   Home,
   Inbox,
   ListPlus,
+  MessagesSquare,
   Lock,
   MoreHorizontal,
   Pencil,
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react'
 
 import { excluirEspaco, excluirLista, excluirPasta } from '@/app/tasks/actions'
+import { useChatNaoLidas } from '@/components/tasks/chat-contador'
 import { ItensCompartilhar } from '@/components/tasks/compartilhar'
 import { ConfirmarExclusao, EspacoDialog, ListaDialog, PastaDialog } from '@/components/tasks/dialogs'
 import { Avatar, MarcaEspaco } from '@/components/tasks/pecas'
@@ -128,7 +130,8 @@ function destinoAposExcluir(pathname: string, alvo: Dialogo): string | null {
 function Conteudo() {
   const pathname = usePathname()
   const router = useRouter()
-  const { arvore, colab, caixaNaoLidas } = useTasks()
+  const { arvore, colab, caixaNaoLidas, chatNaoLidas } = useTasks()
+  const chatPendentes = useChatNaoLidas(chatNaoLidas)
   const [dialogo, setDialogo] = React.useState<Dialogo | null>(null)
   const [fechados, setFechados] = React.useState<Set<string>>(new Set())
 
@@ -164,6 +167,9 @@ function Conteudo() {
         </ItemNav>
         <ItemNav href="/tasks/caixa" icone={Inbox} ativo={pathname.startsWith('/tasks/caixa')} contador={caixaNaoLidas}>
           Caixa de entrada
+        </ItemNav>
+        <ItemNav href="/tasks/chat" icone={MessagesSquare} ativo={pathname.startsWith('/tasks/chat')} contador={chatPendentes}>
+          Chat
         </ItemNav>
         <ItemNav href="/tasks/minhas" icone={UserRound} ativo={pathname.startsWith('/tasks/minhas')}>
           Minhas tarefas

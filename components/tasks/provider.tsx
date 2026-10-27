@@ -33,6 +33,8 @@ interface TasksContextValue {
   alternarFavorito: (tipo: TipoFavorito, id: string) => Promise<void>
   /** Avisos esperando na Caixa de entrada (não lidos, não adiados). */
   caixaNaoLidas: number
+  /** Mensagens de chat não lidas na hora em que a página abriu. */
+  chatNaoLidas: number
 }
 
 const TasksContext = React.createContext<TasksContextValue | null>(null)
@@ -56,6 +58,7 @@ export function TasksProvider({
   arvore,
   favoritos: favoritosDoServidor,
   caixaNaoLidas = 0,
+  chatNaoLidas = 0,
   children,
 }: {
   colab: Pessoa
@@ -63,6 +66,7 @@ export function TasksProvider({
   arvore: EspacoComArvore[]
   favoritos: Favorito[]
   caixaNaoLidas?: number
+  chatNaoLidas?: number
   children: React.ReactNode
 }) {
   const router = useRouter()
@@ -175,8 +179,9 @@ export function TasksProvider({
       ehFavorito,
       alternarFavorito,
       caixaNaoLidas,
+      chatNaoLidas,
     }),
-    [colab, pessoas, pessoa, nomeDe, arvore, abrirTarefa, fecharTarefa, prefetchTarefa, pegarDetalhe, emitir, ouvir, sidebarAberta, favoritos, ehFavorito, alternarFavorito, caixaNaoLidas],
+    [colab, pessoas, pessoa, nomeDe, arvore, abrirTarefa, fecharTarefa, prefetchTarefa, pegarDetalhe, emitir, ouvir, sidebarAberta, favoritos, ehFavorito, alternarFavorito, caixaNaoLidas, chatNaoLidas],
   )
 
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>
