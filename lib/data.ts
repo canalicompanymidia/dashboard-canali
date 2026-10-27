@@ -156,35 +156,45 @@ export async function getAccumulatedAnnualRevenue(
 }
 
 /**
- * % de EBITDA acumulado no ano.
+ * % de EBITDA acumulado no ano: soma do EBITDA em R$ sobre a soma do
+ * faturamento dos mesmos meses.
  *
- * Prefere o cálculo real — soma dos valores de EBITDA sobre a soma do
- * faturamento dos mesmos meses. Se o time só preencheu o percentual, cai
- * para a média simples dos meses informados.
+ * Mês lançado só com o percentual entra também: o valor sai do % sobre o
+ * faturamento do mês (fechamento manual ou, sem ele, o do Hub). Antes, um
+ * único mês em R$ fazia os meses só com % sumirem da conta.
  */
 export function calcAccumulatedEbitda(
   financials: MonthlyFinancial[],
+  salesByMonth: Record<number, number> = {},
 ): { pct: number | null; value: number | null } {
-  const withValue = financials.filter(
-    (f) => f.ebitda_value !== null && f.revenue_manual !== null && toNumber(f.revenue_manual) > 0,
-  )
+  let totalEbitda = 0
+  let totalRevenue = 0
+  const pctsSemBase: number[] = []
 
-  if (withValue.length > 0) {
-    const totalEbitda = withValue.reduce((sum, f) => sum + toNumber(f.ebitda_value), 0)
-    const totalRevenue = withValue.reduce((sum, f) => sum + toNumber(f.revenue_manual), 0)
-    return {
-      pct: totalRevenue > 0 ? (totalEbitda / totalRevenue) * 100 : null,
-      value: totalEbitda,
+  for (const f of financials) {
+    const manual = f.revenue_manual === null ? null : toNumber(f.revenue_manual)
+    const revenue = manual && manual > 0 ? manual : toNumber(salesByMonth[f.month])
+
+    if (f.ebitda_value !== null && revenue > 0) {
+      totalEbitda += toNumber(f.ebitda_value)
+      totalRevenue += revenue
+    } else if (f.ebitda_pct !== null) {
+      if (revenue > 0) {
+        totalEbitda += (toNumber(f.ebitda_pct) / 100) * revenue
+        totalRevenue += revenue
+      } else {
+        pctsSemBase.push(toNumber(f.ebitda_pct))
+      }
     }
   }
 
-  const withPct = financials.filter((f) => f.ebitda_pct !== null)
-  if (withPct.length > 0) {
-    const avg = withPct.reduce((sum, f) => sum + toNumber(f.ebitda_pct), 0) / withPct.length
-    const totalValue = financials.reduce((sum, f) => sum + toNumber(f.ebitda_value), 0)
-    return { pct: avg, value: totalValue > 0 ? totalValue : null }
+  if (totalRevenue > 0) {
+    return { pct: (totalEbitda / totalRevenue) * 100, value: totalEbitda }
   }
-
+  // Sem faturamento em nenhum mês: resta a média simples dos percentuais.
+  if (pctsSemBase.length > 0) {
+    return { pct: pctsSemBase.reduce((sum, p) => sum + p, 0) / pctsSemBase.length, value: null }
+  }
   return { pct: null, value: null }
 }
 
@@ -197,13 +207,14 @@ export async function getGoalsWithProgress(year?: number): Promise<{
   const context = getYearContext()
   const targetYear = year ?? context.year
 
-  const [goals, financials] = await Promise.all([
+  const [goals, financials, salesByMonth] = await Promise.all([
     getAnnualGoals(targetYear),
     getMonthlyFinancials(targetYear),
+    getMonthlyGrossRevenueRecord(targetYear),
   ])
 
   const accumulatedRevenue = await getAccumulatedAnnualRevenue(targetYear, financials)
-  const ebitda = calcAccumulatedEbitda(financials)
+  const ebitda = calcAccumulatedEbitda(financials, salesByMonth)
 
   return {
     goals: goals.map((goal) =>

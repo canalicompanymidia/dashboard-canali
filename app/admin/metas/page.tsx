@@ -24,7 +24,7 @@ export default async function AdminGoalsPage() {
     getMonthlyGrossRevenueRecord(year),
   ])
 
-  const ebitda = calcAccumulatedEbitda(financials)
+  const ebitda = calcAccumulatedEbitda(financials, salesByMonth)
 
   return (
     <div className="space-y-5">
