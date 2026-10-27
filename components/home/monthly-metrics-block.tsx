@@ -321,7 +321,7 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
             compra de Mercado Livre Sem Estoque, SellerUp, Loja Pronta Sem Estoque e Shopee Sem
             Estoque, sem sck de vendedor (priscila, tiffany, samuel, carlos, melissa, patrick,
             fabiano, mateus), mais Do Zero à Primeira Venda na Shopee e DesbravadorIA com sck de
-            YouTube ou Instagram (youtube, ytb, instagram, ig)
+            YouTube ou Instagram (youtube, ytb, yt, instagram, ig, bioig)
           </span>
         ) : null}
 
