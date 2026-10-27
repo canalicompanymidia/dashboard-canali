@@ -209,7 +209,7 @@ export function MonthlyMetricsBlock({ initialMetrics }: MonthlyMetricsBlockProps
         <Stat
           label="Faturamento do funil de entrada"
           value={formatCurrency(metrics.segments.entryFunnel.grossRevenue)}
-          hint={`${formatNumber(metrics.segments.entryFunnel.count)} venda(s) · ${formatCurrency(metrics.segments.entryFunnel.netRevenue)} líquido · sem vendedores`}
+          hint={`${formatNumber(metrics.segments.entryFunnel.count)} venda(s) · ${formatCurrency(metrics.segments.entryFunnel.netRevenue)} líquido`}
           icon={Filter}
         />
       </div>
