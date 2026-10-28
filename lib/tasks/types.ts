@@ -343,11 +343,21 @@ export type Resultado<T = null> =
 
 export type TipoConversa = 'dm' | 'grupo'
 
+/** Os emojis de reação, na ordem do seletor (os mesmos do WhatsApp). */
+export const EMOJIS_REACAO = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const
+
+/** Um emoji numa mensagem e quem reagiu com ele. */
+export interface ReacaoChat {
+  emoji: string
+  emails: string[]
+}
+
 export interface MensagemChat {
   id: string
   autor: string
   texto: string
   created_at: string
+  reacoes?: ReacaoChat[]
 }
 
 /** Uma conversa na lista lateral do chat. */
@@ -360,4 +370,6 @@ export interface ConversaResumo {
   ultima_em: string
   previa: MensagemChat | null
   nao_lidas: number
+  /** A pessoa silenciou o grupo: sem som, sem notificação e fora do contador. */
+  silenciado: boolean
 }

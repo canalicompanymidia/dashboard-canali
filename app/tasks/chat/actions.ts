@@ -4,10 +4,10 @@ import { z } from 'zod'
 
 import { getColaborador, type Colaborador } from '@/lib/auth'
 import { getSupabaseAdminClient } from '@/lib/supabase/server'
-import { contarChat, ehMembro, getConversas, getMensagens } from '@/lib/tasks/chat'
+import { contarChat, ehMembro, getConversas, getMensagens, getReacoes } from '@/lib/tasks/chat'
 import { getPessoas } from '@/lib/tasks/data'
 import { primeiraMensagem, uuid } from '@/lib/tasks/schemas'
-import type { ConversaResumo, MensagemChat, Resultado } from '@/lib/tasks/types'
+import { EMOJIS_REACAO, type ConversaResumo, type MensagemChat, type ReacaoChat, type Resultado } from '@/lib/tasks/types'
 
 /*
  * Chat do Tasks. Toda ação confere a sessão e, quando mexe numa conversa,
@@ -224,5 +224,82 @@ export async function sairDoGrupo(conversaId: unknown): Promise<Resultado> {
 
   const { count } = await ctx.supabase.from('tarefas_chat_membros').select('email', { count: 'exact', head: true }).eq('conversa_id', id)
   if (!count) await ctx.supabase.from('tarefas_chat_conversas').delete().eq('id', id)
+  return sucesso(null)
+}
+
+const reagirSchema = z.object({
+  mensagemId: uuid,
+  emoji: z.enum(EMOJIS_REACAO, { message: 'Reação inválida.' }),
+})
+
+/**
+ * Reage a uma mensagem. Uma reação por pessoa: outro emoji troca, o mesmo
+ * emoji remove. Devolve as reações da mensagem já atualizadas.
+ */
+export async function reagir(input: unknown): Promise<Resultado<ReacaoChat[]>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const parsed = reagirSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { mensagemId, emoji } = parsed.data
+  const eu = ctx.colab.email
+
+  const { data: mensagem } = await ctx.supabase.from('tarefas_chat_mensagens').select('conversa_id').eq('id', mensagemId).maybeSingle()
+  if (!mensagem || !(await ehMembro(mensagem.conversa_id as string, eu))) return falha('Mensagem não encontrada.')
+
+  const chave = { mensagem_id: mensagemId, email: eu }
+  const { data: atual } = await ctx.supabase.from('tarefas_chat_reacoes').select('emoji').match(chave).maybeSingle()
+  const { error } =
+    atual?.emoji === emoji
+      ? await ctx.supabase.from('tarefas_chat_reacoes').delete().match(chave)
+      : await ctx.supabase
+          .from('tarefas_chat_reacoes')
+          .upsert({ ...chave, emoji, created_at: new Date().toISOString() }, { onConflict: 'mensagem_id,email' })
+  if (error) return falha(`Erro ao reagir: ${error.message}`)
+
+  return sucesso((await getReacoes([mensagemId])).get(mensagemId) ?? [])
+}
+
+const reacoesSchema = z.object({ conversaId: uuid, ids: z.array(uuid).max(300) })
+
+/** Reações atuais das mensagens que estão na tela (para ver as dos outros). */
+export async function carregarReacoes(input: unknown): Promise<Resultado<Record<string, ReacaoChat[]>>> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const parsed = reacoesSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { conversaId, ids } = parsed.data
+  if (!(await ehMembro(conversaId, ctx.colab.email))) return falha('Conversa não encontrada.')
+
+  // Só mensagens desta conversa: ids de outra conversa são ignorados.
+  const { data: daConversa } = await ctx.supabase
+    .from('tarefas_chat_mensagens')
+    .select('id')
+    .eq('conversa_id', conversaId)
+    .in('id', ids)
+  const validos = (daConversa ?? []).map((m) => m.id as string)
+  const mapa = await getReacoes(validos)
+  return sucesso(Object.fromEntries(validos.map((id) => [id, mapa.get(id) ?? []])))
+}
+
+const silenciarSchema = z.object({ conversaId: uuid, silenciado: z.boolean() })
+
+/** Silencia ou reativa um grupo só para quem pediu. Conversa individual não pode. */
+export async function silenciarGrupo(input: unknown): Promise<Resultado> {
+  const ctx = await autenticar()
+  if ('erro' in ctx) return falha(ctx.erro)
+  const parsed = silenciarSchema.safeParse(input)
+  if (!parsed.success) return falha(primeiraMensagem(parsed.error))
+  const { conversaId, silenciado } = parsed.data
+
+  const { data: conversa } = await ctx.supabase.from('tarefas_chat_conversas').select('tipo').eq('id', conversaId).maybeSingle()
+  if (!conversa || !(await ehMembro(conversaId, ctx.colab.email))) return falha('Conversa não encontrada.')
+  if (conversa.tipo !== 'grupo') return falha('Só grupos podem ser silenciados.')
+
+  const { error } = await ctx.supabase
+    .from('tarefas_chat_membros')
+    .update({ silenciado })
+    .match({ conversa_id: conversaId, email: ctx.colab.email })
+  if (error) return falha(`Erro ao silenciar: ${error.message}`)
   return sucesso(null)
 }

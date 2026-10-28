@@ -1,16 +1,19 @@
 'use client'
 
 import * as React from 'react'
-import { ArrowLeft, Bell, BellOff, Check, LogOut, MessageSquarePlus, MoreHorizontal, Pencil, SendHorizontal, UserPlus, Users } from 'lucide-react'
+import { ArrowLeft, Bell, BellOff, Check, SmilePlus, LogOut, MessageSquarePlus, MoreHorizontal, Pencil, SendHorizontal, UserPlus, Users } from 'lucide-react'
 
 import {
   abrirConversa,
   carregarConversas,
   carregarMensagens,
+  carregarReacoes,
   editarGrupo,
   enviarMensagem,
   marcarConversaLida,
+  reagir,
   sairDoGrupo,
+  silenciarGrupo,
 } from '@/app/tasks/chat/actions'
 import { EVENTO_CHAT_LIDO } from '@/components/tasks/chat-contador'
 import {
@@ -33,7 +36,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import type { ConversaResumo, MensagemChat } from '@/lib/tasks/types'
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
+import { EMOJIS_REACAO, type ConversaResumo, type MensagemChat, type ReacaoChat } from '@/lib/tasks/types'
 import { cn } from '@/lib/utils'
 
 /** Sem aviso em tempo real (canal fora), ainda confere de tempos em tempos. */
@@ -186,6 +190,7 @@ export function ChatView({
               void recarregar()
             }}
             onMudou={recarregar}
+            onReagiu={() => avisarChat(conversa.id)}
             onSaiu={() => {
               abrir(null)
               void recarregar()
@@ -273,8 +278,9 @@ function ListaConversas({
               <IconeConversa conversa={c} eu={eu} />
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2">
-                  <span className={cn('truncate text-sm', c.nao_lidas > 0 ? 'font-semibold' : 'font-medium')}>
-                    {tituloDe(c, eu, nomeDe)}
+                  <span className={cn('flex min-w-0 items-center gap-1 text-sm', c.nao_lidas > 0 ? 'font-semibold' : 'font-medium')}>
+                    <span className="truncate">{tituloDe(c, eu, nomeDe)}</span>
+                    {c.silenciado ? <BellOff className="size-3 shrink-0 text-muted-foreground" aria-label="Silenciado" /> : null}
                   </span>
                   <span className="shrink-0 text-[11px] text-muted-foreground tabular">{quando(c.ultima_em)}</span>
                 </span>
@@ -283,7 +289,12 @@ function ListaConversas({
                     {previa ? `${c.tipo === 'grupo' || previa.autor === eu ? `${autor}: ` : ''}${previa.texto}` : 'Sem mensagens'}
                   </span>
                   {c.nao_lidas > 0 ? (
-                    <span className="shrink-0 rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground tabular">
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-1.5 text-[11px] font-semibold tabular',
+                        c.silenciado ? 'bg-muted-foreground/25 text-foreground' : 'bg-primary text-primary-foreground',
+                      )}
+                    >
                       {c.nao_lidas > 99 ? '99+' : c.nao_lidas}
                     </span>
                   ) : null}
@@ -304,6 +315,7 @@ function Conversa({
   onVoltar,
   onEnviada,
   onMudou,
+  onReagiu,
   onSaiu,
 }: {
   conversa: ConversaResumo
@@ -312,6 +324,7 @@ function Conversa({
   onVoltar: () => void
   onEnviada: () => void
   onMudou: () => void
+  onReagiu: () => void
   onSaiu: () => void
 }) {
   const { colab, nomeDe } = useTasks()
@@ -325,6 +338,8 @@ function Conversa({
   const noFim = React.useRef(true)
   const ultimaRef = React.useRef<string | null>(null)
   ultimaRef.current = mensagens.filter((m) => !m.id.startsWith('tmp-')).at(-1)?.created_at ?? null
+  const idsNaTela = React.useRef<string[]>([])
+  idsNaTela.current = mensagens.filter((m) => !m.id.startsWith('tmp-')).slice(-300).map((m) => m.id)
 
   const marcarLida = React.useCallback(() => {
     void marcarConversaLida(conversa.id).then(() => window.dispatchEvent(new Event(EVENTO_CHAT_LIDO)))
@@ -352,12 +367,29 @@ function Conversa({
 
   const buscarNovas = React.useCallback(async () => {
     const depois = ultimaRef.current
-    const r = await carregarMensagens({ conversaId: conversa.id, ...(depois ? { depois } : {}) })
+    const [r, reacoes] = await Promise.all([
+      carregarMensagens({ conversaId: conversa.id, ...(depois ? { depois } : {}) }),
+      // Reações chegam em mensagens antigas também: atualiza as da tela.
+      carregarReacoes({ conversaId: conversa.id, ids: idsNaTela.current }),
+    ])
+    if (reacoes.ok) {
+      setMensagens((atual) => {
+        let mudou = false
+        const novo = atual.map((m) => {
+          const lista = reacoes.data[m.id]
+          if (!lista || JSON.stringify(lista) === JSON.stringify(m.reacoes ?? [])) return m
+          mudou = true
+          return { ...m, reacoes: lista }
+        })
+        return mudou ? novo : atual
+      })
+    }
     if (!r.ok || r.data.mensagens.length === 0) return
     // A conversa aberta marca como lida na hora, então o contador não sobe:
     // o aviso sonoro sai daqui.
     const deOutros = r.data.mensagens.filter((m) => m.autor !== colab.email)
-    if (deOutros.length > 0) {
+    // Grupo silenciado: a mensagem aparece, mas sem som nem notificação.
+    if (deOutros.length > 0 && !conversa.silenciado) {
       tocarSomChat()
       const ultima = deOutros.at(-1)!
       const autor = nomeDe(ultima.autor)
@@ -374,7 +406,19 @@ function Conversa({
       return novas.length ? [...atual, ...novas] : atual
     })
     if (document.visibilityState === 'visible') marcarLida()
-  }, [conversa.id, conversa.tipo, conversa.nome, marcarLida, colab.email, nomeDe])
+  }, [conversa.id, conversa.tipo, conversa.nome, conversa.silenciado, marcarLida, colab.email, nomeDe])
+
+  const reagirEm = async (mensagemId: string, emoji: string) => {
+    // Mostra na hora; o servidor devolve o estado certo logo depois.
+    setMensagens((atual) => atual.map((m) => (m.id === mensagemId ? { ...m, reacoes: alternarReacao(m.reacoes ?? [], eu, emoji) } : m)))
+    const r = await reagir({ mensagemId, emoji })
+    if (!r.ok) {
+      setErro(r.message)
+      return
+    }
+    setMensagens((atual) => atual.map((m) => (m.id === mensagemId ? { ...m, reacoes: r.data } : m)))
+    onReagiu()
+  }
 
   React.useEffect(() => {
     if (sinal) void buscarNovas()
@@ -457,6 +501,17 @@ function Conversa({
                 <UserPlus className="size-4" />
                 Adicionar pessoas
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={async () => {
+                  const r = await silenciarGrupo({ conversaId: conversa.id, silenciado: !conversa.silenciado })
+                  if (!r.ok) return setErro(r.message)
+                  onMudou()
+                  window.dispatchEvent(new Event(EVENTO_CHAT_LIDO))
+                }}
+              >
+                {conversa.silenciado ? <Bell className="size-4" /> : <BellOff className="size-4" />}
+                {conversa.silenciado ? 'Reativar avisos' : 'Silenciar grupo'}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
@@ -497,7 +552,7 @@ function Conversa({
             {conversa.tipo === 'grupo' ? 'Nenhuma mensagem no grupo ainda.' : `Diga oi para ${nomeDe(outros[0] ?? eu).split(' ')[0]}.`}
           </p>
         ) : (
-          <Mensagens mensagens={mensagens} eu={eu} grupo={conversa.tipo === 'grupo'} />
+          <Mensagens mensagens={mensagens} eu={eu} grupo={conversa.tipo === 'grupo'} onReagir={reagirEm} />
         )}
       </div>
 
@@ -517,8 +572,31 @@ function Conversa({
   )
 }
 
-function Mensagens({ mensagens, eu, grupo }: { mensagens: MensagemChat[]; eu: string; grupo: boolean }) {
+/** Uma reação por pessoa: o mesmo emoji tira, outro troca. */
+function alternarReacao(reacoes: ReacaoChat[], eu: string, emoji: string): ReacaoChat[] {
+  const tinha = reacoes.find((r) => r.emails.includes(eu))?.emoji
+  const sem = reacoes.map((r) => ({ ...r, emails: r.emails.filter((e) => e !== eu) })).filter((r) => r.emails.length > 0)
+  if (tinha === emoji) return sem
+  const existente = sem.find((r) => r.emoji === emoji)
+  return existente
+    ? sem.map((r) => (r.emoji === emoji ? { ...r, emails: [...r.emails, eu] } : r))
+    : [...sem, { emoji, emails: [eu] }]
+}
+
+function Mensagens({
+  mensagens,
+  eu,
+  grupo,
+  onReagir,
+}: {
+  mensagens: MensagemChat[]
+  eu: string
+  grupo: boolean
+  onReagir: (mensagemId: string, emoji: string) => void
+}) {
   const { nomeDe } = useTasks()
+  const [seletor, setSeletor] = React.useState<string | null>(null)
+
   return (
     <ol className="space-y-0.5">
       {mensagens.map((m, i) => {
@@ -529,6 +607,8 @@ function Mensagens({ mensagens, eu, grupo }: { mensagens: MensagemChat[]; eu: st
           !novoDia && anterior?.autor === m.autor && Date.parse(m.created_at) - Date.parse(anterior.created_at) < 5 * 60_000
         const minha = m.autor === eu
         const enviando = m.id.startsWith('tmp-')
+        const reacoes = m.reacoes ?? []
+        const minhaReacao = reacoes.find((r) => r.emails.includes(eu))?.emoji
         return (
           <li key={m.id}>
             {novoDia ? (
@@ -544,16 +624,82 @@ function Mensagens({ mensagens, eu, grupo }: { mensagens: MensagemChat[]; eu: st
                 {grupo && !minha && !juntaComAnterior ? (
                   <span className="mb-0.5 px-1 text-xs font-medium text-muted-foreground">{nomeDe(m.autor)}</span>
                 ) : null}
-                <div
-                  className={cn(
-                    'rounded-2xl px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap',
-                    minha ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
-                    enviando && 'opacity-60',
-                  )}
-                  title={fmtHora.format(new Date(m.created_at))}
-                >
-                  {comLinks(m.texto)}
-                </div>
+                <Popover open={seletor === m.id} onOpenChange={(aberto) => setSeletor(aberto ? m.id : null)}>
+                  <div className={cn('group/msg flex max-w-full items-center gap-1', minha && 'flex-row-reverse')}>
+                    <PopoverAnchor asChild>
+                      <div
+                        className={cn(
+                          'min-w-0 rounded-2xl px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap',
+                          minha ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+                          enviando && 'opacity-60',
+                        )}
+                        title={fmtHora.format(new Date(m.created_at))}
+                        onClick={(e) => {
+                          // No toque (sem mouse), tocar na mensagem abre as reações.
+                          if (enviando || (e.target as HTMLElement).closest('a')) return
+                          if (window.matchMedia('(hover: none)').matches) setSeletor(m.id)
+                        }}
+                      >
+                        {comLinks(m.texto)}
+                      </div>
+                    </PopoverAnchor>
+                    {!enviando ? (
+                      <button
+                        type="button"
+                        onClick={() => setSeletor(m.id)}
+                        aria-label="Reagir com emoji"
+                        className="hidden size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/msg:opacity-100 hover:bg-accent hover:text-foreground focus-visible:opacity-100 [@media(hover:hover)]:flex"
+                      >
+                        <SmilePlus className="size-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                  <PopoverContent side="top" align={minha ? 'end' : 'start'} className="w-auto p-1">
+                    <div className="flex gap-0.5" role="group" aria-label="Reações">
+                      {EMOJIS_REACAO.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            setSeletor(null)
+                            onReagir(m.id, emoji)
+                          }}
+                          aria-pressed={minhaReacao === emoji}
+                          aria-label={`Reagir com ${emoji}`}
+                          className={cn(
+                            'flex size-10 items-center justify-center rounded-full text-xl transition-transform hover:scale-110 hover:bg-accent',
+                            minhaReacao === emoji && 'bg-accent',
+                          )}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {reacoes.length > 0 ? (
+                  <div className={cn('-mt-1.5 flex flex-wrap gap-1 px-2', minha && 'justify-end')}>
+                    {reacoes.map((r) => {
+                      const minhaEsta = r.emails.includes(eu)
+                      return (
+                        <button
+                          key={r.emoji}
+                          type="button"
+                          onClick={() => onReagir(m.id, r.emoji)}
+                          title={r.emails.map((e) => (e === eu ? 'Você' : nomeDe(e))).join(', ')}
+                          aria-label={`${r.emoji} ${r.emails.length}${minhaEsta ? ', inclui você' : ''}`}
+                          className={cn(
+                            'flex h-6 items-center gap-1 rounded-full border bg-card px-1.5 text-xs shadow-xs tabular',
+                            minhaEsta ? 'border-primary/60' : 'border-border',
+                          )}
+                        >
+                          <span className="text-sm leading-none">{r.emoji}</span>
+                          {r.emails.length > 1 ? r.emails.length : null}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
                 {!mensagens[i + 1] || mensagens[i + 1].autor !== m.autor ? (
                   <span className="mt-0.5 px-1 text-[11px] text-muted-foreground tabular">
                     {enviando ? 'Enviando…' : fmtHora.format(new Date(m.created_at))}

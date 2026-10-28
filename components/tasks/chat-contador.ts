@@ -56,7 +56,7 @@ export function useChatNaoLidas(inicial: number): number {
 async function notificarNovas(eu: string, nomeDe: (email: string) => string) {
   const r = await carregarConversas()
   if (!r.ok) return
-  for (const c of r.data.filter((c) => c.nao_lidas > 0 && c.previa && c.previa.autor !== eu).slice(0, 3)) {
+  for (const c of r.data.filter((c) => !c.silenciado && c.nao_lidas > 0 && c.previa && c.previa.autor !== eu).slice(0, 3)) {
     const previa = c.previa!
     const autor = nomeDe(previa.autor)
     notificarMensagem({
