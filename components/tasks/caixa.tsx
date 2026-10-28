@@ -294,7 +294,16 @@ function LinhaGrupo({
   }
 
   return (
-    <li className="group px-4 py-3 hover:bg-accent/40">
+    <li
+      className="group cursor-pointer px-4 py-3 hover:bg-accent/40"
+      onClick={(e) => {
+        // O card inteiro abre a tarefa (com os comentários no fim). Botões,
+        // links, a caixa de resposta e texto selecionado não contam.
+        if ((e.target as HTMLElement).closest('button, a, textarea, input')) return
+        if (window.getSelection()?.toString()) return
+        abrirTarefa(tarefa.id)
+      }}
+    >
       <div className="flex items-start gap-3">
         {principal.autor ? <Avatar email={principal.autor} tamanho="md" /> : <Icone className="mt-1 size-4 text-muted-foreground" />}
         <div className="min-w-0 flex-1">
