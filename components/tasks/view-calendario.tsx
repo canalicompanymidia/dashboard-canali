@@ -7,6 +7,7 @@ import { atualizarTarefa } from '@/app/tasks/actions'
 import { StatusDot } from '@/components/tasks/pecas'
 import { useEventosDeTarefa, useTasks } from '@/components/tasks/provider'
 import { useAcao } from '@/components/tasks/use-acao'
+import { useVisiveis } from '@/components/tasks/use-fechadas'
 import { Button } from '@/components/ui/button'
 import { DIAS_SEMANA_CURTOS, diaDaSemana, hojeISO, somarDias } from '@/lib/tasks/datas'
 import { statusEncerra, type ListaContexto, type Tarefa } from '@/lib/tasks/types'
@@ -25,6 +26,8 @@ export function ViewCalendario({ contexto, tarefas }: { contexto: ListaContexto;
   const [itens, setItens] = React.useState(tarefas)
   React.useEffect(() => setItens(tarefas), [tarefas])
   useEventosDeTarefa(contexto.lista.id, setItens)
+  // Fechadas só aparecem com o filtro "Fechadas" ligado.
+  const visiveis = useVisiveis(itens, contexto.statuses)
   const [arrastando, setArrastando] = React.useState<string | null>(null)
   const [sobre, setSobre] = React.useState<string | null>(null)
 
@@ -35,14 +38,14 @@ export function ViewCalendario({ contexto, tarefas }: { contexto: ListaContexto;
 
   const porDia = React.useMemo(() => {
     const mapa = new Map<string, Tarefa[]>()
-    for (const t of itens) {
+    for (const t of visiveis.tarefas) {
       if (!t.data_vencimento) continue
       const lista = mapa.get(t.data_vencimento) ?? []
       lista.push(t)
       mapa.set(t.data_vencimento, lista)
     }
     return mapa
-  }, [itens])
+  }, [visiveis])
 
   const semData = itens.filter((t) => !t.data_vencimento && !statusEncerra(t.status_tipo)).length
 

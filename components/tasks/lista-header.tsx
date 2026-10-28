@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { CalendarDays, List, MoreHorizontal, Pencil, Pin, Plus, Settings2, SquareKanban, Star } from 'lucide-react'
+import { CalendarDays, CircleCheck, List, MoreHorizontal, Pencil, Pin, Plus, Settings2, SquareKanban, Star } from 'lucide-react'
 
 import { atualizarLista } from '@/app/tasks/actions'
 
@@ -11,6 +11,7 @@ import { ListaConfigDialog } from '@/components/tasks/lista-config'
 import { useTasks } from '@/components/tasks/provider'
 import { AbasDeVisualizacao, Topbar, type Crumb } from '@/components/tasks/topbar'
 import { useAcao } from '@/components/tasks/use-acao'
+import { useMostrarFechadas } from '@/components/tasks/use-fechadas'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { VISUALIZACOES, type ListaContexto, type Visualizacao } from '@/lib/tasks/types'
@@ -28,6 +29,7 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
   const { executar, pendente } = useAcao()
   const { ehFavorito, alternarFavorito } = useTasks()
   const favorita = ehFavorito('lista', lista.id)
+  const [fechadas, setFechadas] = useMostrarFechadas()
 
   const jaEhPadrao = lista.visualizacao_padrao === view
 
@@ -74,6 +76,16 @@ export function ListaHeader({ contexto, view }: { contexto: ListaContexto; view:
         <Button size="sm" onClick={() => setNovaTarefa(true)}>
           <Plus className="size-4" />
           <span className="hidden sm:inline">Tarefa</span>
+        </Button>
+        <Button
+          variant={fechadas ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => setFechadas(!fechadas)}
+          aria-pressed={fechadas}
+          title={fechadas ? 'Esconder tarefas fechadas' : 'Mostrar tarefas fechadas'}
+        >
+          <CircleCheck className="size-4" />
+          <span className="hidden sm:inline">{fechadas ? 'Esconder fechadas' : 'Fechadas'}</span>
         </Button>
         <BotaoCopiarLink caminho={`${base}?view=${view}`} rotulo="Copiar link desta lista (nesta aba)" />
         <Button

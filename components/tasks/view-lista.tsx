@@ -8,6 +8,7 @@ import { Avatares, DataChip, PrioridadeFlag, StatusDot, StatusPill } from '@/com
 import { DataPicker, PessoasPicker, PrioridadePicker, StatusPicker } from '@/components/tasks/pickers'
 import { useEventosDeTarefa, useTasks } from '@/components/tasks/provider'
 import { Indicadores } from '@/components/tasks/task-row'
+import { useVisiveis } from '@/components/tasks/use-fechadas'
 import { useAcao } from '@/components/tasks/use-acao'
 import { Button } from '@/components/ui/button'
 import { aplicarPatchLocal, type PatchLocal } from '@/lib/tasks/patch-local'
@@ -25,6 +26,8 @@ export function ViewLista({ contexto, tarefas }: { contexto: ListaContexto; tare
   React.useEffect(() => setItens(tarefas), [tarefas])
   // O modal avisa o que mudou; a lista acompanha sem ir ao servidor.
   useEventosDeTarefa(lista.id, setItens)
+  // Fechadas só aparecem com o filtro "Fechadas" ligado.
+  const visiveis = useVisiveis(itens, statuses)
 
   const [fechados, setFechados] = React.useState<Set<string>>(
     () => new Set(statuses.filter((s) => statusEncerra(s.tipo)).map((s) => s.id)),
@@ -55,8 +58,8 @@ export function ViewLista({ contexto, tarefas }: { contexto: ListaContexto; tare
           </Button>
         </div>
       ) : null}
-      {statuses.map((status) => {
-        const doStatus = itens.filter((t) => t.status_id === status.id && !t.pai_id)
+      {visiveis.statuses.map((status) => {
+        const doStatus = visiveis.tarefas.filter((t) => t.status_id === status.id && !t.pai_id)
         const fechado = fechados.has(status.id)
         return (
           <section key={status.id}>
@@ -94,7 +97,7 @@ export function ViewLista({ contexto, tarefas }: { contexto: ListaContexto; tare
                   <Linha
                     key={t.id}
                     tarefa={t}
-                    subtarefas={itens.filter((s) => s.pai_id === t.id)}
+                    subtarefas={visiveis.tarefas.filter((s) => s.pai_id === t.id)}
                     statuses={statuses}
                     onAtualizar={substituir}
                     aoErro={setErro}

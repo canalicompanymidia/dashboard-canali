@@ -8,6 +8,7 @@ import { Avatar, Avatares, ChipsDeCampos, DataChip, PrioridadeFlag, StatusPill }
 import { useEventosDeTarefa, useTasks } from '@/components/tasks/provider'
 import { Indicadores } from '@/components/tasks/task-row'
 import { useAcao } from '@/components/tasks/use-acao'
+import { useVisiveis } from '@/components/tasks/use-fechadas'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -49,6 +50,15 @@ const AGRUPAMENTOS: { chave: Agrupamento; rotulo: string }[] = [
   { chave: 'vencimento', rotulo: 'Vencimento' },
 ]
 
+/**
+ * Listas que abrem agrupadas de outro jeito que não por status. A
+ * escolha de cada pessoa (guardada no navegador) continua valendo por cima.
+ */
+const AGRUPAMENTO_PADRAO: Record<string, Agrupamento> = {
+  // Gestão › Acompanhamento de Lideranças
+  '51000000-0000-4000-8000-000000000012': 'responsavel',
+}
+
 type NovaTarefaValores = Partial<{
   status_id: string
   prioridade: Prioridade | null
@@ -79,10 +89,15 @@ export function ViewQuadro({ contexto, tarefas }: { contexto: ListaContexto; tar
   const [itens, setItens] = React.useState(tarefas)
   React.useEffect(() => setItens(tarefas), [tarefas])
   useEventosDeTarefa(lista.id, setItens)
+  // Fechadas só aparecem com o filtro "Fechadas" ligado.
+  const semFechadas = useVisiveis(itens, statuses)
 
   // Preferência por lista, lembrada neste navegador.
-  const chavePreferencia = `canali-tasks-quadro-${lista.id}`
-  const [agrupar, setAgrupar] = React.useState<Agrupamento>('status')
+  const padrao = AGRUPAMENTO_PADRAO[lista.id] ?? 'status'
+  // Chave nova nas listas com padrão próprio: uma escolha antiga de
+  // "status" feita antes do padrão existir não o esconde.
+  const chavePreferencia = `canali-tasks-quadro-${lista.id}${AGRUPAMENTO_PADRAO[lista.id] ? '-v2' : ''}`
+  const [agrupar, setAgrupar] = React.useState<Agrupamento>(padrao)
   const [mostrarVazias, setMostrarVazias] = React.useState(false)
   // Layout effect: aplica a preferência antes da primeira pintura, sem
   // piscar o quadro por status.
@@ -94,7 +109,7 @@ export function ViewQuadro({ contexto, tarefas }: { contexto: ListaContexto; tar
       if (p.agrupar && AGRUPAMENTOS.some((a) => a.chave === p.agrupar)) setAgrupar(p.agrupar)
       if (typeof p.vazias === 'boolean') setMostrarVazias(p.vazias)
     } catch {
-      // Sem storage o quadro abre por status.
+      // Sem storage o quadro abre no padrão da lista.
     }
   }, [chavePreferencia])
   function guardar(prox: { agrupar: Agrupamento; vazias: boolean }) {
@@ -113,13 +128,13 @@ export function ViewQuadro({ contexto, tarefas }: { contexto: ListaContexto; tar
 
   const hoje = hojeISO()
   const colunas = React.useMemo(
-    () => montarColunas(agrupar, itens, statuses, pessoas.map((p) => p.email), nomeDe, hoje),
-    [agrupar, itens, statuses, pessoas, nomeDe, hoje],
+    () => montarColunas(agrupar, semFechadas.tarefas, semFechadas.statuses, pessoas.map((p) => p.email), nomeDe, hoje),
+    [agrupar, semFechadas, pessoas, nomeDe, hoje],
   )
   const visiveis = colunas.filter(
     (c) => c.cards.length > 0 || !c.ocultavel || (agrupar === 'responsavel' && mostrarVazias),
   )
-  const totalRaiz = itens.filter((t) => !t.pai_id).length
+  const totalRaiz = semFechadas.tarefas.filter((t) => !t.pai_id).length
 
   async function soltar(coluna: Coluna, antesDeId: string | null) {
     const id = arrastando
